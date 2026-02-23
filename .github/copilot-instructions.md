@@ -6,6 +6,15 @@
 # 构建
 ./gradlew assemble
 
+# 通过 Gradle 运行，传入 源目录 和 目标目录
+./gradlew bootRun --args='<源目录路径> <目标目录路径>'
+
+# 构建可执行 jar
+./gradlew bootJar
+
+# 运行
+java -jar build/libs/ai_for_test_charm-0.0.1-SNAPSHOT.jar <源目录路径> <目标目录路径>
+
 # 运行所有 Cucumber 测试
 TESTCHARM_DAL_DUMPINPUT=false ./gradlew cucumber
 

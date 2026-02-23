@@ -69,6 +69,3 @@ task cucumber(type: JavaExec) {
             '--glue', 'com.github',
             project.hasProperty('file') ? project.file : 'src/test/resources']
 }
-
-tasks.bootJar { enabled = false }
-
