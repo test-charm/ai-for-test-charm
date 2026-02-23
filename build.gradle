@@ -33,8 +33,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-    implementation "io.cucumber:cucumber-gherkin:${cucumberVersion}"
+    implementation "io.cucumber:gherkin:17.0.2"
 
+    annotationProcessor('org.projectlombok:lombok:1.18.42')
+    implementation('org.projectlombok:lombok:1.18.42')
+
+    testAnnotationProcessor('org.projectlombok:lombok:1.18.42')
+    testImplementation('org.projectlombok:lombok:1.18.42')
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation("io.cucumber:cucumber-java:${cucumberVersion}")
     testImplementation("io.cucumber:cucumber-spring:${cucumberVersion}")
@@ -42,6 +47,7 @@ dependencies {
     testImplementation "com.github.leeonky:jfactory-cucumber:${jfactoryDal}"
     testImplementation "com.github.leeonky:DAL-java:${jfactoryDal}"
     testImplementation "com.github.leeonky:DAL-extension-basic:${jfactoryDal}"
+    testImplementation 'commons-io:commons-io:2.18.0'
 
 }
 
