@@ -93,7 +93,7 @@ public class KbProcessor {
         String delimiter = docString.getDelimiter().isEmpty() ? "\"\"\"" : docString.getDelimiter();
         sb.append(indent).append(delimiter).append("\n");
         for (String line : docString.getContent().split("\n", -1)) {
-            sb.append(indent).append(line.stripLeading()).append("\n");
+            sb.append(indent).append(line).append("\n");
         }
         sb.append(indent).append(delimiter).append("\n");
     }

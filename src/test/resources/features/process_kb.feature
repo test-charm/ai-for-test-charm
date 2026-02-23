@@ -43,10 +43,10 @@
                                     Then query data by jfactory:
                                       '''
                                       : {
-                                      Orders: [{
-                                      id= 1
-                                      code= SN1
-                                      }]
+                                        Orders: [{
+                                          id= 1
+                                          code= SN1
+                                        }]
                                       }
                                       '''
                                 ```
