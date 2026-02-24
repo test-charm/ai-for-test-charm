@@ -316,3 +316,60 @@
       }
       """
 
+  场景: 去掉Feature之前的tag和注释
+    假如存在"Feature文件":
+      """
+      fileName: 'tagged.feature'
+      content: ```
+               @tag1 @tag2
+               # This is a comment
+               Feature: feature with tags
+
+                 Scenario: scenario X
+                   Given step X
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          tagged.feature: ```
+                          Scenario: feature with tags - scenario X
+                            Given step X
+                          ```
+        }
+      }
+      """
+
+  场景: 去掉Scenario的tag
+    假如存在"Feature文件":
+      """
+      fileName: 'scenario-tag.feature'
+      content: ```
+               Feature: feature Y
+
+                 @scenario-tag
+                 Scenario: scenario Y
+                   Given step Y
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          scenario-tag.feature: ```
+                                Scenario: feature Y - scenario Y
+                                  Given step Y
+                                ```
+        }
+      }
+      """
+
