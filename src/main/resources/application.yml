@@ -1,0 +1,13 @@
+dify:
+  api-endpoint: http://mock-server.tool.net:1080/dify/v1
+  dataset-api-key: difyDatasetApiKey
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+mock-server:
+  endpoint: http://mock-server.tool.net:1080
+

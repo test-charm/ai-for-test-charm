@@ -1,20 +1,33 @@
 package com.testcharm;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+import java.nio.file.Paths;
 
 @SpringBootApplication
+@EnableFeignClients
 public class Application implements CommandLineRunner {
+
+    @Autowired(required = false)
+    private DifyApiClient difyApiClient;
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if (args.length >= 2) {
-            new KbProcessor().process(args[0], args[1]);
+            var src = args[0];
+            var dst = args[1];
+            new KbProcessor().process(src, dst);
+            String datasetName = Paths.get(dst).getFileName().toString();
+            new DifyKbUploader(difyApiClient)
+                    .upload(datasetName, Paths.get(dst));
         }
     }
 }

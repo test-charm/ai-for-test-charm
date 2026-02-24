@@ -48,6 +48,8 @@ dependencies {
     testImplementation "com.github.leeonky:DAL-java:${jfactoryDal}"
     testImplementation "com.github.leeonky:DAL-extension-basic:${jfactoryDal}"
     testImplementation 'commons-io:commons-io:2.18.0'
+    testImplementation('org.mock-server:mockserver-client-java:5.13.2')
+    testImplementation('org.mock-server:mockserver-netty:5.13.2')
 
 }
 

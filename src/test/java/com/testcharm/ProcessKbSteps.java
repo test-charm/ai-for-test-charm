@@ -5,6 +5,7 @@ import com.github.leeonky.jfactory.cucumber.JData;
 import com.github.leeonky.jfactory.cucumber.Table;
 import com.testcharm.entity.CmdArg;
 import io.cucumber.java.Before;
+import io.cucumber.java.zh_cn.并且;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
@@ -38,5 +39,10 @@ public class ProcessKbSteps {
     @那么("输出的文件应为:")
     public void verifyOutputFiles(String docString) {
         Assertions.expect(tempFiles.getAbsolutePath("output")).should(docString.replaceAll("'''", "\"\"\""));
+    }
+
+    @并且("数据应为ex:")
+    public void 数据应为ex(String docString) {
+        jData.allDataShouldBe(docString.replaceAll("'''", "\"\"\""));
     }
 }
