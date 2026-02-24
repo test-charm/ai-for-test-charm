@@ -63,17 +63,21 @@ public class KbProcessor {
     }
 
     private void printFeature(StringBuilder sb, Messages.GherkinDocument.Feature feature) {
-        sb.append(feature.getKeyword()).append(": ").append(feature.getName()).append("\n");
+        String featureName = feature.getName();
+        boolean first = true;
         for (Messages.GherkinDocument.Feature.FeatureChild child : feature.getChildrenList()) {
             if (child.hasScenario()) {
-                sb.append("\n");
-                printScenario(sb, child.getScenario(), "  ");
+                if (!first) {
+                    sb.append("\n");
+                }
+                first = false;
+                printScenario(sb, child.getScenario(), "", featureName);
             }
         }
     }
 
-    private void printScenario(StringBuilder sb, Messages.GherkinDocument.Feature.Scenario scenario, String indent) {
-        sb.append(indent).append(scenario.getKeyword()).append(": ").append(scenario.getName()).append("\n");
+    private void printScenario(StringBuilder sb, Messages.GherkinDocument.Feature.Scenario scenario, String indent, String featureName) {
+        sb.append(indent).append(scenario.getKeyword()).append(": ").append(featureName).append(" - ").append(scenario.getName()).append("\n");
         for (Messages.GherkinDocument.Feature.Step step : scenario.getStepsList()) {
             printStep(sb, step, indent + "  ");
         }

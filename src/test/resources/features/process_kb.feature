@@ -100,21 +100,19 @@
         : {
           JFactory: {
             test-charm.feature: ```
-                                Feature: query data
-
-                                  Scenario: Query data use jfactory
-                                    Given "Orders":
-                                      | id | code |
-                                      | 1  | SN1  |
-                                    Then query data by jfactory:
-                                      '''
-                                      : {
-                                        Orders: [{
-                                          id= 1
-                                          code= SN1
-                                        }]
-                                      }
-                                      '''
+                                Scenario: query data - Query data use jfactory
+                                  Given "Orders":
+                                    | id | code |
+                                    | 1  | SN1  |
+                                  Then query data by jfactory:
+                                    '''
+                                    : {
+                                      Orders: [{
+                                        id= 1
+                                        code= SN1
+                                      }]
+                                    }
+                                    '''
                                 ```
           }
         }
@@ -136,21 +134,19 @@
               fieldName= file
               name= 'test-charm.feature.txt'
               inputStream.string: ```
-                                  Feature: query data
-
-                                    Scenario: Query data use jfactory
-                                      Given "Orders":
-                                        | id | code |
-                                        | 1  | SN1  |
-                                      Then query data by jfactory:
-                                        '''
-                                        : {
-                                          Orders: [{
-                                            id= 1
-                                            code= SN1
-                                          }]
-                                        }
-                                        '''
+                                  Scenario: query data - Query data use jfactory
+                                    Given "Orders":
+                                      | id | code |
+                                      | 1  | SN1  |
+                                    Then query data by jfactory:
+                                      '''
+                                      : {
+                                        Orders: [{
+                                          id= 1
+                                          code= SN1
+                                        }]
+                                      }
+                                      '''
                                   ```
             }]
           }
@@ -241,17 +237,13 @@
         : {
           TestDataset: {
             a.feature: ```
-                       Feature: feature A
-
-                         Scenario: scenario A
-                           Given step A
+                       Scenario: feature A - scenario A
+                         Given step A
                        ```
             sub: {
               b.feature: ```
-                         Feature: feature B
-
-                           Scenario: scenario B
-                             Given step B
+                         Scenario: feature B - scenario B
+                           Given step B
                          ```
             }
           }
@@ -279,10 +271,8 @@
               fieldName= file
               name= 'a.feature.txt'
               inputStream.string: ```
-                                  Feature: feature A
-
-                                    Scenario: scenario A
-                                      Given step A
+                                  Scenario: feature A - scenario A
+                                    Given step A
                                   ```
             }]
           } {
@@ -290,10 +280,8 @@
               fieldName= file
               name= 'b.feature.txt'
               inputStream.string: ```
-                                  Feature: feature B
-
-                                    Scenario: scenario B
-                                      Given step B
+                                  Scenario: feature B - scenario B
+                                    Given step B
                                   ```
             }]
           }]
