@@ -446,6 +446,39 @@
       }
       """
 
+  场景: 多个Scenario之间有空行
+    假如存在"Feature文件":
+      """
+      fileName: 'multi-scenario.feature'
+      content: ```
+               Feature: multi scenario
+
+                 Scenario: first
+                   Given step 1
+
+                 Scenario: second
+                   Given step 2
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          multi-scenario.txt: ```
+                              Scenario: multi scenario - first
+                                Given step 1
+
+                              Scenario: multi scenario - second
+                                Given step 2
+                              ```
+        }
+      }
+      """
+
   场景: 使用--disable-upload时不上传到Dify
     假如存在"Feature文件":
       """
