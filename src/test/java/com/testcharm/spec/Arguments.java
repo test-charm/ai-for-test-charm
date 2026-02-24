@@ -12,6 +12,7 @@ public class Arguments {
             var tempFolder = TempFiles.tempFiles().getPath();
             property("src").value(tempFolder.resolve("input").toString());
             property("dst").value(tempFolder.resolve("output", "TestCharm").toString());
+            property("disableUpload").value(false);
         }
     }
 }

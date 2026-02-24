@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 @SpringBootApplication
 @EnableFeignClients
@@ -24,10 +25,13 @@ public class Application implements CommandLineRunner {
         if (args.length >= 2) {
             var src = args[0];
             var dst = args[1];
+            boolean disableUpload = Arrays.asList(args).contains("--disable-upload");
             new KbProcessor().process(src, dst);
-            String datasetName = Paths.get(dst).getFileName().toString();
-            new DifyKbUploader(difyApiClient)
-                    .upload(datasetName, Paths.get(dst));
+            if (!disableUpload) {
+                String datasetName = Paths.get(dst).getFileName().toString();
+                new DifyKbUploader(difyApiClient)
+                        .upload(datasetName, Paths.get(dst));
+            }
         }
     }
 }

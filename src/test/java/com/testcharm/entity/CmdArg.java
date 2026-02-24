@@ -7,4 +7,5 @@ import lombok.Setter;
 @Setter
 public class CmdArg {
     private String src, dst;
+    private boolean disableUpload;
 }

@@ -446,3 +446,30 @@
       }
       """
 
+  场景: 使用--disable-upload时不上传到Dify
+    假如存在"Feature文件":
+      """
+      fileName: 'no-upload.feature'
+      content: ```
+               Feature: no upload feature
+
+                 Scenario: no upload scenario
+                   Given no upload step
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      disableUpload: true
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          no-upload.txt: ```
+                        Scenario: no upload feature - no upload scenario
+                          Given no upload step
+                        ```
+        }
+      }
+      """
+

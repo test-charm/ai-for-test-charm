@@ -11,6 +11,7 @@ import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ProcessKbSteps {
@@ -33,7 +34,11 @@ public class ProcessKbSteps {
     public void executeWith(String traitAndSpec, Table table) {
         List<CmdArg> args = jData.prepare(traitAndSpec, table);
         CmdArg cmdArg = args.get(0);
-        Application.main(new String[]{cmdArg.getSrc(), cmdArg.getDst()});
+        var argList = new ArrayList<>(List.of(cmdArg.getSrc(), cmdArg.getDst()));
+        if (cmdArg.isDisableUpload()) {
+            argList.add("--disable-upload");
+        }
+        Application.main(argList.toArray(new String[0]));
     }
 
     @那么("输出的文件应为:")
