@@ -30,6 +30,11 @@ public interface DifyApiClient {
                               @PathVariable("documentId") String documentId,
                               @RequestPart("file") feign.form.FormData file);
 
+    @PostMapping(value = "/datasets/{datasetId}/document/create-by-file",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    void createDocumentByFile(@PathVariable("datasetId") String datasetId,
+                              @RequestPart("file") feign.form.FormData file);
+
     @Data
     class DataListResponse {
         private List<DataItem> data;

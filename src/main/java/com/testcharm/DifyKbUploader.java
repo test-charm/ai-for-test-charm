@@ -28,7 +28,8 @@ public class DifyKbUploader {
     }
 
     private String findDocumentId(String datasetId, String keyword) {
-        return difyApiClient.listDocuments(datasetId, 100, keyword).getData().get(0).getId();
+        var data = difyApiClient.listDocuments(datasetId, 100, keyword).getData();
+        return data.isEmpty() ? null : data.get(0).getId();
     }
 
     @SneakyThrows
@@ -38,6 +39,10 @@ public class DifyKbUploader {
         String documentId = findDocumentId(datasetId, uploadName);
         byte[] fileContent = Files.readAllBytes(file);
         FormData formData = new FormData("text/plain", uploadName, fileContent);
-        difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
+        if (documentId != null) {
+            difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
+        } else {
+            difyApiClient.createDocumentByFile(datasetId, formData);
+        }
     }
 }

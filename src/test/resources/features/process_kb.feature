@@ -206,6 +206,79 @@
       }
       """
 
+  场景: 知识库中不存在同名文件时创建新文件
+    假如存在"Feature文件":
+      """
+      fileName: 'new-file.feature'
+      content: ```
+               Feature: new feature
+
+                 Scenario: new scenario
+                   Given new step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/documents'
+        method.value= 'GET'
+      }
+      ---
+      code: 200
+      body: ```
+            {
+                "data": []
+            }
+            ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/document/create-by-file'
+        method.value= 'POST'
+      }
+      ---
+      code: 200
+      body: ```
+            {
+                "document": {
+                    "id": "new-doc-id"
+                }
+            }
+            ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          new-file.feature: ```
+                            Scenario: new feature - new scenario
+                              Given new step
+                            ```
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { POST[/dify/v1/datasets/testcharm/document/create-by-file]: {...}}
+        : {
+          formData: [{
+            fieldName= file
+            name= 'new-file.feature.txt'
+            inputStream.string: ```
+                                Scenario: new feature - new scenario
+                                  Given new step
+                                ```
+          }]
+        }
+      }
+      """
+
   场景: Rule的title也要加到Scenario title中
     假如存在"Feature文件":
       """
