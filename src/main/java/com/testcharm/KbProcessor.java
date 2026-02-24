@@ -28,7 +28,11 @@ public class KbProcessor {
     @SneakyThrows
     private void processFeatureFile(Path file, Path srcRoot, Path dstRoot) {
         String formatted = formatFeature(Files.readString(file), file.toString());
-        Path outputFile = dstRoot.resolve(srcRoot.relativize(file));
+        Path relativePath = srcRoot.relativize(file);
+        String txtName = relativePath.getFileName().toString().replaceFirst("\\.feature$", ".txt");
+        Path outputFile = relativePath.getParent() != null
+                ? dstRoot.resolve(relativePath.getParent()).resolve(txtName)
+                : dstRoot.resolve(txtName);
         Files.createDirectories(outputFile.getParent());
         Files.writeString(outputFile, formatted);
     }

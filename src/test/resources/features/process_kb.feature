@@ -152,21 +152,21 @@
       """
       : {
         JFactory: {
-          test-charm.feature: ```
-                              Scenario: query data - Query data use jfactory
-                                Given "Orders":
-                                  | id | code |
-                                  | 1  | SN1  |
-                                Then query data by jfactory:
-                                  '''
-                                  : {
-                                    Orders: [{
-                                      id= 1
-                                      code= SN1
-                                    }]
-                                  }
-                                  '''
-                              ```
+          test-charm.txt: ```
+                          Scenario: query data - Query data use jfactory
+                            Given "Orders":
+                              | id | code |
+                              | 1  | SN1  |
+                            Then query data by jfactory:
+                              '''
+                              : {
+                                Orders: [{
+                                  id= 1
+                                  code= SN1
+                                }]
+                              }
+                              '''
+                          ```
         }
       }
       """
@@ -177,7 +177,7 @@
         : {
           params: {
             limit: '100'
-            keyword: 'test-charm.feature.txt'
+            keyword: 'test-charm.txt'
           }
         }
 
@@ -185,7 +185,7 @@
         : {
           formData: [{
             fieldName= file
-            name= 'test-charm.feature.txt'
+            name= 'test-charm.txt'
             inputStream.string: ```
                                 Scenario: query data - Query data use jfactory
                                   Given "Orders":
@@ -255,10 +255,10 @@
       """
       : {
         TestCharm: {
-          new-file.feature: ```
-                            Scenario: new feature - new scenario
-                              Given new step
-                            ```
+          new-file.txt: ```
+                        Scenario: new feature - new scenario
+                          Given new step
+                        ```
         }
       }
       """
@@ -269,7 +269,7 @@
         : {
           formData: [{
             fieldName= file
-            name= 'new-file.feature.txt'
+            name= 'new-file.txt'
             inputStream.string: ```
                                 Scenario: new feature - new scenario
                                   Given new step
@@ -300,10 +300,10 @@
       """
       : {
         TestCharm: {
-          rule.feature: ```
-                        Scenario: feature X - rule Y - scenario Z
-                          Given step Z
-                        ```
+          rule.txt: ```
+                    Scenario: feature X - rule Y - scenario Z
+                      Given step Z
+                    ```
         }
       }
       """
@@ -337,15 +337,15 @@
       """
       : {
         TestCharm: {
-          a.feature: ```
-                     Scenario: feature A - scenario A
-                       Given step A
-                     ```
+          a.txt: ```
+                 Scenario: feature A - scenario A
+                   Given step A
+                 ```
           sub: {
-            b.feature: ```
-                       Scenario: feature B - scenario B
-                         Given step B
-                       ```
+            b.txt: ```
+                   Scenario: feature B - scenario B
+                     Given step B
+                   ```
           }
         }
       }
@@ -357,12 +357,12 @@
         : [{
           params: {
             limit: '100'
-            keyword: 'a.feature.txt'
+            keyword: 'b.txt'
           }
         } {
           params: {
             limit: '100'
-            keyword: 'b.feature.txt'
+            keyword: 'a.txt'
           }
         }]
 
@@ -370,19 +370,19 @@
         : [{
           formData: [{
             fieldName= file
-            name= 'a.feature.txt'
+            name= 'b.txt'
             inputStream.string: ```
-                                Scenario: feature A - scenario A
-                                  Given step A
+                                Scenario: feature B - scenario B
+                                  Given step B
                                 ```
           }]
         } {
           formData: [{
             fieldName= file
-            name= 'b.feature.txt'
+            name= 'a.txt'
             inputStream.string: ```
-                                Scenario: feature B - scenario B
-                                  Given step B
+                                Scenario: feature A - scenario A
+                                  Given step A
                                 ```
           }]
         }]
@@ -410,10 +410,10 @@
       """
       : {
         TestCharm: {
-          tagged.feature: ```
-                          Scenario: feature with tags - scenario X
-                            Given step X
-                          ```
+          tagged.txt: ```
+                      Scenario: feature with tags - scenario X
+                        Given step X
+                      ```
         }
       }
       """
@@ -438,10 +438,10 @@
       """
       : {
         TestCharm: {
-          scenario-tag.feature: ```
-                                Scenario: feature Y - scenario Y
-                                  Given step Y
-                                ```
+          scenario-tag.txt: ```
+                            Scenario: feature Y - scenario Y
+                              Given step Y
+                            ```
         }
       }
       """
