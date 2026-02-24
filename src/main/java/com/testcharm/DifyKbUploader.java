@@ -34,9 +34,10 @@ public class DifyKbUploader {
     @SneakyThrows
     private void uploadFile(String datasetId, Path file) {
         String fileName = file.getFileName().toString();
-        String documentId = findDocumentId(datasetId, fileName);
+        String uploadName = fileName + ".txt";
+        String documentId = findDocumentId(datasetId, uploadName);
         byte[] fileContent = Files.readAllBytes(file);
-        FormData formData = new FormData("application/octet-stream", fileName, fileContent);
+        FormData formData = new FormData("text/plain", uploadName, fileContent);
         difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
     }
 }

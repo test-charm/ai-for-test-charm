@@ -1,6 +1,6 @@
 dify:
-  api-endpoint: http://mock-server.tool.net:1080/dify/v1
-  dataset-api-key: difyDatasetApiKey
+  api-endpoint: http://localhost/v1
+  dataset-api-key: toBeSet
 
 ---
 spring:
@@ -11,3 +11,6 @@ spring:
 mock-server:
   endpoint: http://mock-server.tool.net:1080
 
+dify:
+  api-endpoint: http://mock-server.tool.net:1080/dify/v1
+  dataset-api-key: difyDatasetApiKey

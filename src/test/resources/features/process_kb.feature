@@ -125,7 +125,7 @@
           : {
             params: {
               limit: '100'
-              keyword: 'test-charm.feature'
+              keyword: 'test-charm.feature.txt'
             }
           }
 
@@ -133,7 +133,7 @@
           : {
             formData: [{
               fieldName= file
-              name= 'test-charm.feature'
+              name= 'test-charm.feature.txt'
               inputStream.string: ```
                                   Feature: query data
 
