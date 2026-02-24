@@ -86,7 +86,7 @@ public class Factories {
         @Override
         public void save(Object object) {
             if (object instanceof FeatureFile featureFile) {
-                tempFiles.createWithContent("input/test-charm.feature", featureFile.getContent().replaceAll("'''", "\"\"\""));
+                tempFiles.createWithContent("input/" + featureFile.getFileName(), featureFile.getContent().replaceAll("'''", "\"\"\""));
             }
         }
     }

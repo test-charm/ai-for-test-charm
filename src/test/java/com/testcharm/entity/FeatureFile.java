@@ -7,6 +7,7 @@ import lombok.Setter;
 @Setter
 public class FeatureFile {
 
+    private String fileName;
     private String content;
 
 }
