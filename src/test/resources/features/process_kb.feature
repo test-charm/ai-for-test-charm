@@ -153,6 +153,89 @@
         }
         """
 
+    场景: Rule的title也要加到Scenario title中
+      假如存在"Feature文件":
+        """
+        fileName: 'rule.feature'
+        content: ```
+                 Feature: feature X
+
+                   Rule: rule Y
+
+                     Scenario: scenario Z
+                       Given step Z
+                 ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "dataset-rule",
+                          "name": "RuleDataset"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/dataset-rule/documents'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "doc-rule"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/dataset-rule/documents/doc-rule/update-by-file'
+          method.value= 'POST'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "document": {
+                      "id": "doc-rule"
+                  }
+              }
+              ```
+        """
+      当用以下"命令行参数"执行时:
+        """
+        src: '/tmp/ai_for_test_charm/input'
+        dst: '/tmp/ai_for_test_charm/output/RuleDataset'
+        """
+      那么输出的文件应为:
+        """
+        : {
+          RuleDataset: {
+            rule.feature: ```
+                          Scenario: feature X - rule Y - scenario Z
+                            Given step Z
+                          ```
+          }
+        }
+        """
+
     场景: 多个feature文件及子目录下的feature文件
       假如存在"Feature文件":
         """

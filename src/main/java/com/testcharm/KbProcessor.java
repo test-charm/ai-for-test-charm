@@ -64,14 +64,17 @@ public class KbProcessor {
 
     private void printFeature(StringBuilder sb, Messages.GherkinDocument.Feature feature) {
         String featureName = feature.getName();
-        boolean first = true;
         for (Messages.GherkinDocument.Feature.FeatureChild child : feature.getChildrenList()) {
             if (child.hasScenario()) {
-                if (!first) {
-                    sb.append("\n");
-                }
-                first = false;
                 printScenario(sb, child.getScenario(), "", featureName);
+            } else if (child.hasRule()) {
+                Messages.GherkinDocument.Feature.FeatureChild.Rule rule = child.getRule();
+                String prefix = featureName + " - " + rule.getName();
+                for (Messages.GherkinDocument.Feature.FeatureChild.RuleChild ruleChild : rule.getChildrenList()) {
+                    if (ruleChild.hasScenario()) {
+                        printScenario(sb, ruleChild.getScenario(), "", prefix);
+                    }
+                }
             }
         }
     }
