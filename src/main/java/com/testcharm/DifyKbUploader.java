@@ -2,22 +2,23 @@ package com.testcharm;
 
 import feign.FeignException;
 import feign.form.FormData;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
 @Slf4j
+@Component
 public class DifyKbUploader {
-    private final DifyApiClient difyApiClient;
-    private final int retryCount;
-
-    public DifyKbUploader(DifyApiClient difyApiClient, int retryCount) {
-        this.difyApiClient = difyApiClient;
-        this.retryCount = retryCount;
-    }
+    @Autowired(required = false)
+    private DifyApiClient difyApiClient;
+    @Setter
+    private int retryCount = 3;
 
     @SneakyThrows
     public void upload(String datasetName, Path outputDir) {

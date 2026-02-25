@@ -13,8 +13,11 @@ import java.util.Arrays;
 @EnableFeignClients
 public class Application implements CommandLineRunner {
 
-    @Autowired(required = false)
-    private DifyApiClient difyApiClient;
+    @Autowired
+    private KbProcessor kbProcessor;
+
+    @Autowired
+    private DifyKbUploader difyKbUploader;
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
@@ -31,11 +34,11 @@ public class Application implements CommandLineRunner {
                     .findFirst()
                     .map(a -> Integer.parseInt(a.substring("--retry-count=".length())))
                     .orElse(3);
-            new KbProcessor().process(src, dst);
+            kbProcessor.process(src, dst);
             if (!disableUpload) {
                 String datasetName = Paths.get(dst).getFileName().toString();
-                new DifyKbUploader(difyApiClient, retryCount)
-                        .upload(datasetName, Paths.get(dst));
+                difyKbUploader.setRetryCount(retryCount);
+                difyKbUploader.upload(datasetName, Paths.get(dst));
             }
         }
     }

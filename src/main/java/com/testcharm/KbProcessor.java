@@ -4,6 +4,7 @@ import io.cucumber.gherkin.Gherkin;
 import io.cucumber.messages.IdGenerator;
 import io.cucumber.messages.Messages;
 import lombok.SneakyThrows;
+import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Stream;
 
+@Component
 public class KbProcessor {
 
     @SneakyThrows
