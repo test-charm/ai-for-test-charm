@@ -38,6 +38,7 @@ public class ProcessKbSteps {
         if (cmdArg.isDisableUpload()) {
             argList.add("--disable-upload");
         }
+        argList.add("--retry-count=" + cmdArg.getRetryCount());
         Application.main(argList.toArray(new String[0]));
     }
 

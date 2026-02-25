@@ -1,5 +1,6 @@
 package com.testcharm;
 
+import feign.FeignException;
 import feign.form.FormData;
 import lombok.SneakyThrows;
 
@@ -9,9 +10,11 @@ import java.util.stream.Stream;
 
 public class DifyKbUploader {
     private final DifyApiClient difyApiClient;
+    private final int retryCount;
 
-    public DifyKbUploader(DifyApiClient difyApiClient) {
+    public DifyKbUploader(DifyApiClient difyApiClient, int retryCount) {
         this.difyApiClient = difyApiClient;
+        this.retryCount = retryCount;
     }
 
     @SneakyThrows
@@ -38,10 +41,27 @@ public class DifyKbUploader {
         String documentId = findDocumentId(datasetId, fileName);
         byte[] fileContent = Files.readAllBytes(file);
         FormData formData = new FormData("text/plain", fileName, fileContent);
-        if (documentId != null) {
-            difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
-        } else {
-            difyApiClient.createDocumentByFile(datasetId, formData);
+        executeWithRetry(() -> {
+            if (documentId != null) {
+                difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
+            } else {
+                difyApiClient.createDocumentByFile(datasetId, formData);
+            }
+        });
+    }
+
+    private void executeWithRetry(Runnable action) {
+        int attempts = 0;
+        while (true) {
+            try {
+                action.run();
+                return;
+            } catch (FeignException e) {
+                attempts++;
+                if (e.status() < 500 || attempts >= retryCount) {
+                    throw e;
+                }
+            }
         }
     }
 }

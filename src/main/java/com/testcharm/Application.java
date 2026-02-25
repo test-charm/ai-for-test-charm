@@ -26,10 +26,15 @@ public class Application implements CommandLineRunner {
             var src = args[0];
             var dst = args[1];
             boolean disableUpload = Arrays.asList(args).contains("--disable-upload");
+            int retryCount = Arrays.stream(args)
+                    .filter(a -> a.startsWith("--retry-count="))
+                    .findFirst()
+                    .map(a -> Integer.parseInt(a.substring("--retry-count=".length())))
+                    .orElse(3);
             new KbProcessor().process(src, dst);
             if (!disableUpload) {
                 String datasetName = Paths.get(dst).getFileName().toString();
-                new DifyKbUploader(difyApiClient)
+                new DifyKbUploader(difyApiClient, retryCount)
                         .upload(datasetName, Paths.get(dst));
             }
         }

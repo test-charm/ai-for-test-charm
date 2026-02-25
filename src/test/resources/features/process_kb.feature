@@ -479,6 +479,126 @@
       }
       """
 
+  场景: 更新文件时服务器返回500会自动重试
+    假如存在"Feature文件":
+      """
+      fileName: 'retry-update.feature'
+      content: ```
+               Feature: retry update
+
+                 Scenario: retry update scenario
+                   Given retry update step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/documents/feature-file/update-by-file'
+        method.value= 'POST'
+      }
+      ---
+      code: 500
+      times: 2
+      ---
+      code: 200
+      body: ```
+            {
+                "document": {
+                    "id": "feature-file"
+                }
+            }
+            ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          retry-update.txt: ```
+                            Scenario: retry update - retry update scenario
+                              Given retry update step
+                            ```
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { POST[/dify/v1/datasets/testcharm/documents/feature-file/update-by-file]: {...}}
+        : [{...} {...} {...}]
+      }
+      """
+
+  场景: 创建文件时服务器返回500会自动重试
+    假如存在"Feature文件":
+      """
+      fileName: 'retry-create.feature'
+      content: ```
+               Feature: retry create
+
+                 Scenario: retry create scenario
+                   Given retry create step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/documents'
+        method.value= 'GET'
+      }
+      ---
+      code: 200
+      body: ```
+            {
+                "data": []
+            }
+            ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/document/create-by-file'
+        method.value= 'POST'
+      }
+      ---
+      code: 500
+      times: 2
+      ---
+      code: 200
+      body: ```
+            {
+                "document": {
+                    "id": "new-doc-id"
+                }
+            }
+            ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          retry-create.txt: ```
+                            Scenario: retry create - retry create scenario
+                              Given retry create step
+                            ```
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { POST[/dify/v1/datasets/testcharm/document/create-by-file]: {...}}
+        : [{...} {...} {...}]
+      }
+      """
+
   场景: 使用--disable-upload时不上传到Dify
     假如存在"Feature文件":
       """
