@@ -203,6 +203,10 @@
                                 ```
           }]
         }
+
+        系统日志::filter: { message: '上传成功: test-charm.txt' }
+        : { ::size= 1 }
+
       }
       """
 
@@ -537,6 +541,7 @@
       }
       ---
       code: 500
+      body: failed
       times: 2
       ---
       code: 200
@@ -568,6 +573,10 @@
       : {
         MockApi::filter: { POST[/dify/v1/datasets/testcharm/documents/feature-file/update-by-file]: {...}}
         : [{...} {...} {...}]
+
+        系统日志::filter: { message: '上传成功: retry-update.txt' }
+        : { ::size= 1 }
+
       }
       """
 
@@ -635,6 +644,46 @@
       : {
         MockApi::filter: { POST[/dify/v1/datasets/testcharm/document/create-by-file]: {...}}
         : [{...} {...} {...}]
+
+        系统日志::filter: { message: '上传成功: retry-create.txt' }
+        : { ::size= 1 }
+
+      }
+      """
+
+  场景: 上传失败时打印错误日志包含文件名和响应内容
+    假如存在"Feature文件":
+      """
+      fileName: 'fail-upload.feature'
+      content: ```
+               Feature: fail upload
+
+                 Scenario: fail upload scenario
+                   Given fail upload step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/documents/feature-file/update-by-file'
+        method.value= 'POST'
+      }
+      ---
+      code: 403
+      body: 'Forbidden: you have been blocked'
+      """
+    当用以下"命令行参数"执行时允许失败:
+      """
+      retryCount: 0
+      """
+    那么数据应为ex:
+      """
+      : {
+        系统日志::filter: {
+          level.levelStr: 'ERROR'
+          message: '上传失败: fail-upload.txt, response: Forbidden: you have been blocked'
+        }
+        : { ::size= 1 }
       }
       """
 

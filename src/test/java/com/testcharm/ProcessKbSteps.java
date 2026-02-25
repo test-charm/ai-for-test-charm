@@ -32,6 +32,19 @@ public class ProcessKbSteps {
     @SneakyThrows
     @当("用以下{string}执行时:")
     public void executeWith(String traitAndSpec, Table table) {
+        execute(traitAndSpec, table);
+    }
+
+    @SneakyThrows
+    @当("用以下{string}执行时允许失败:")
+    public void executeWithAllowFailure(String traitAndSpec, Table table) {
+        try {
+            execute(traitAndSpec, table);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void execute(String traitAndSpec, Table table) {
         List<CmdArg> args = jData.prepare(traitAndSpec, table);
         CmdArg cmdArg = args.get(0);
         var argList = new ArrayList<>(List.of(cmdArg.getSrc(), cmdArg.getDst()));

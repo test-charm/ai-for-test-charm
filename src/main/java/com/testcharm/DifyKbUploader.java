@@ -3,11 +3,13 @@ package com.testcharm;
 import feign.FeignException;
 import feign.form.FormData;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
+@Slf4j
 public class DifyKbUploader {
     private final DifyApiClient difyApiClient;
     private final int retryCount;
@@ -41,13 +43,22 @@ public class DifyKbUploader {
         String documentId = findDocumentId(datasetId, fileName);
         byte[] fileContent = Files.readAllBytes(file);
         FormData formData = new FormData("text/plain", fileName, fileContent);
-        executeWithRetry(() -> {
-            if (documentId != null) {
-                difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
-            } else {
-                difyApiClient.createDocumentByFile(datasetId, formData);
-            }
-        });
+        try {
+            executeWithRetry(() -> {
+                if (documentId != null) {
+                    difyApiClient.updateDocumentByFile(datasetId, documentId, formData);
+                } else {
+                    difyApiClient.createDocumentByFile(datasetId, formData);
+                }
+            });
+            log.info("上传成功: {}", fileName);
+        } catch (FeignException e) {
+            log.error("上传失败: {}, response: {}", fileName, e.contentUTF8(), e);
+            throw e;
+        } catch (Exception e) {
+            log.error("上传失败: {}", fileName, e);
+            throw e;
+        }
     }
 
     private void executeWithRetry(Runnable action) {
