@@ -1,8 +1,8 @@
 package com.testcharm;
 
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
-@SpringBootApplication
+@ComponentScan(basePackages = {"com.testcharm"})
 public class CucumberConfiguration {
 }
 

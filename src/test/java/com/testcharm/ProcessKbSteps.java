@@ -11,6 +11,8 @@ import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,6 +46,7 @@ public class ProcessKbSteps {
         }
     }
 
+    @SneakyThrows
     private void execute(String traitAndSpec, Table table) {
         List<CmdArg> args = jData.prepare(traitAndSpec, table);
         CmdArg cmdArg = args.get(0);
@@ -52,7 +55,28 @@ public class ProcessKbSteps {
             argList.add("--disable-upload");
         }
         argList.add("--retry-count=" + cmdArg.getRetryCount());
-        Application.main(argList.toArray(new String[0]));
+        argList.add("--spring.profiles.active=test");
+
+        var command = new ArrayList<>(List.of("java", "-jar", findJarPath()));
+        command.addAll(argList);
+
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.inheritIO();
+        Process process = pb.start();
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("jar process exited with code " + exitCode);
+        }
+    }
+
+    @SneakyThrows
+    private String findJarPath() {
+        try (var files = Files.list(Path.of("build/libs"))) {
+            return files.filter(p -> p.toString().endsWith(".jar") && !p.toString().endsWith("-plain.jar"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("No jar found in build/libs"))
+                    .toString();
+        }
     }
 
     @那么("输出的文件应为:")
