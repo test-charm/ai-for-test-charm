@@ -341,12 +341,10 @@
                  Scenario: feature A - scenario A
                    Given step A
                  ```
-          sub: {
-            b.txt: ```
-                   Scenario: feature B - scenario B
-                     Given step B
-                   ```
-          }
+          sub-b.txt: ```
+                     Scenario: feature B - scenario B
+                       Given step B
+                     ```
         }
       }
       """
@@ -357,26 +355,17 @@
         : [{
           params: {
             limit: '100'
-            keyword: 'b.txt'
+            keyword: 'a.txt'
           }
         } {
           params: {
             limit: '100'
-            keyword: 'a.txt'
+            keyword: 'sub-b.txt'
           }
         }]
 
         MockApi::filter: { POST[/dify/v1/datasets/testcharm/documents/feature-file/update-by-file]: {...}}
         : [{
-          formData: [{
-            fieldName= file
-            name= 'b.txt'
-            inputStream.string: ```
-                                Scenario: feature B - scenario B
-                                  Given step B
-                                ```
-          }]
-        } {
           formData: [{
             fieldName= file
             name= 'a.txt'
@@ -385,7 +374,57 @@
                                   Given step A
                                 ```
           }]
+        } {
+          formData: [{
+            fieldName= file
+            name= 'sub-b.txt'
+            inputStream.string: ```
+                                Scenario: feature B - scenario B
+                                  Given step B
+                                ```
+          }]
         }]
+      }
+      """
+
+  场景: 不同子目录下的同名文件输出时加子目录前缀
+    假如存在"Feature文件":
+      """
+      fileName: 'dir1/common.feature'
+      content: ```
+               Feature: feature in dir1
+
+                 Scenario: scenario in dir1
+                   Given step in dir1
+               ```
+      """
+    假如存在"Feature文件":
+      """
+      fileName: 'dir2/common.feature'
+      content: ```
+               Feature: feature in dir2
+
+                 Scenario: scenario in dir2
+                   Given step in dir2
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          dir1-common.txt: ```
+                           Scenario: feature in dir1 - scenario in dir1
+                             Given step in dir1
+                           ```
+          dir2-common.txt: ```
+                           Scenario: feature in dir2 - scenario in dir2
+                             Given step in dir2
+                           ```
+        }
       }
       """
 
