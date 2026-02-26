@@ -1,8 +1,8 @@
-package com.testcharm.cucumber;
+package org.testcharm.cucumber;
 
 import org.springframework.context.annotation.ComponentScan;
 
-@ComponentScan(basePackages = {"com.testcharm.cucumber"})
+@ComponentScan(basePackages = {"org.testcharm.cucumber"})
 public class CucumberConfiguration {
 }
 

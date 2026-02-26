@@ -1,4 +1,4 @@
-package com.testcharm;
+package org.testcharm;
 
 import feign.FeignException;
 import feign.form.FormData;

@@ -2,7 +2,7 @@
     <include resource="org/springframework/boot/logging/logback/base.xml"/>
 
     <springProfile name="test">
-        <appender name="testLogAppender" class="com.testcharm.TestLogAppender"/>
+        <appender name="testLogAppender" class="org.testcharm.TestLogAppender"/>
         <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
             <appender-ref ref="testLogAppender"/>
         </logger>

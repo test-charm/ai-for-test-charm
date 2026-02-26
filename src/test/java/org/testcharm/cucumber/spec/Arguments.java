@@ -1,8 +1,8 @@
-package com.testcharm.cucumber.spec;
+package org.testcharm.cucumber.spec;
 
 import com.github.leeonky.jfactory.Spec;
-import com.testcharm.cucumber.TempFiles;
-import com.testcharm.cucumber.entity.CmdArg;
+import org.testcharm.cucumber.TempFiles;
+import org.testcharm.cucumber.entity.CmdArg;
 
 public class Arguments {
 

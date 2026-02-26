@@ -1,4 +1,4 @@
-package com.testcharm;
+package org.testcharm;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -21,7 +21,7 @@ public class TestLogAppender extends AppenderBase<ILoggingEvent> {
 
     @Override
     protected void append(ILoggingEvent event) {
-        if (event.getLoggerName().startsWith("com.testcharm.DifyKbUploader")) {
+        if (event.getLoggerName().startsWith("org.testcharm.DifyKbUploader")) {
             try {
                 restTemplate.exchange(RequestEntity.post("http://mock-server.tool.net:1080/e2e/logger").contentType(MediaType.APPLICATION_JSON).body(new ILoggingEvent() {
                     @Override

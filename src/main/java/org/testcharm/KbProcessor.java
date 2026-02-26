@@ -1,4 +1,4 @@
-package com.testcharm;
+package org.testcharm;
 
 import io.cucumber.gherkin.Gherkin;
 import io.cucumber.messages.IdGenerator;

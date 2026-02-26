@@ -1,9 +1,8 @@
-package com.testcharm.cucumber;
+package org.testcharm.cucumber;
 
 import com.github.leeonky.dal.Assertions;
 import com.github.leeonky.jfactory.cucumber.JData;
 import com.github.leeonky.jfactory.cucumber.Table;
-import com.testcharm.cucumber.entity.CmdArg;
 import io.cucumber.java.Before;
 import io.cucumber.java.zh_cn.并且;
 import io.cucumber.java.zh_cn.当;
@@ -11,6 +10,7 @@ import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.testcharm.cucumber.entity.CmdArg;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

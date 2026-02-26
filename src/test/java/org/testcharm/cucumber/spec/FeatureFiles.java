@@ -1,7 +1,7 @@
-package com.testcharm.cucumber.spec;
+package org.testcharm.cucumber.spec;
 
 import com.github.leeonky.jfactory.Spec;
-import com.testcharm.cucumber.entity.FeatureFile;
+import org.testcharm.cucumber.entity.FeatureFile;
 
 public class FeatureFiles {
 

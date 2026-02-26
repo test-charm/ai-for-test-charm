@@ -1,4 +1,4 @@
-package com.testcharm.cucumber;
+package org.testcharm.cucumber;
 
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
