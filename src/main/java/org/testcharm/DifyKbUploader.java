@@ -41,7 +41,7 @@ public class DifyKbUploader {
                 String documentId = findDocumentId(datasetId, difyFileName);
                 int segmentCount = 0;
                 if (documentId != null) {
-                    segmentCount = callWithRetry(() -> difyApiClient.listSegments(datasetId, documentId)).getData().size();
+                    segmentCount = callWithRetry(() -> difyApiClient.listSegments(datasetId, documentId, 1000)).getData().size();
                 }
                 if (scenarioCount == segmentCount) {
                     log.info("{}: 本地 {} 个场景, Dify {} 个分段 - 一致", difyFileName, scenarioCount, segmentCount);

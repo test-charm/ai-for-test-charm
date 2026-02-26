@@ -38,7 +38,8 @@ public interface DifyApiClient {
     @GetMapping(value = "/datasets/{datasetId}/documents/{documentId}/segments",
             produces = "application/json", consumes = "application/json")
     DataListResponse listSegments(@PathVariable("datasetId") String datasetId,
-                                  @PathVariable("documentId") String documentId);
+                                  @PathVariable("documentId") String documentId,
+                                  @RequestParam("limit") int limit);
 
     @Data
     class DataListResponse {

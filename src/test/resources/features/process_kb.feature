@@ -1005,6 +1005,7 @@
         : {
           path.value= '/dify/v1/datasets/testcharm/documents/doc-verified/segments'
           method.value= 'GET'
+          params.limit= '1000'
         }
         ---
         code: 200
@@ -1086,6 +1087,7 @@
         : {
           path.value= '/dify/v1/datasets/testcharm/documents/doc-mismatched/segments'
           method.value= 'GET'
+          params.limit= '1000'
         }
         ---
         code: 200
@@ -1178,6 +1180,7 @@
         : {
           path.value= '/dify/v1/datasets/testcharm/documents/doc-common/segments'
           method.value= 'GET'
+          params.limit= '1000'
         }
         ---
         code: 200
