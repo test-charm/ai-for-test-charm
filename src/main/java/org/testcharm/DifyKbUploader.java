@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -34,11 +35,11 @@ public class DifyKbUploader {
     }
 
     private String findDatasetId(String datasetName) {
-        return difyApiClient.listDatasets().getData().get(0).getId();
+        return callWithRetry(() -> difyApiClient.listDatasets()).getData().get(0).getId();
     }
 
     private String findDocumentId(String datasetId, String keyword) {
-        var data = difyApiClient.listDocuments(datasetId, 100, keyword).getData();
+        var data = callWithRetry(() -> difyApiClient.listDocuments(datasetId, 100, keyword)).getData();
         return data.isEmpty() ? null : data.get(0).getId();
     }
 
@@ -68,12 +69,11 @@ public class DifyKbUploader {
         waiting.sleepSeconds(1);
     }
 
-    private void executeWithRetry(Runnable action) {
+    private <T> T callWithRetry(Supplier<T> action) {
         int attempts = 0;
         while (true) {
             try {
-                action.run();
-                return;
+                return action.get();
             } catch (FeignException e) {
                 attempts++;
                 if (e.status() < 500 || attempts >= retryCount) {
@@ -81,6 +81,13 @@ public class DifyKbUploader {
                 }
             }
         }
+    }
+
+    private void executeWithRetry(Runnable action) {
+        callWithRetry(() -> {
+            action.run();
+            return null;
+        });
     }
 
     @SneakyThrows

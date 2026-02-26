@@ -653,6 +653,127 @@
       }
       """
 
+  场景: listDatasets返回500时自动重试
+    假如存在"Feature文件":
+      """
+      fileName: 'retry-list-dataset.feature'
+      content: ```
+               Feature: retry list dataset
+
+                 Scenario: retry list dataset scenario
+                   Given retry list dataset step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets'
+        method.value= 'GET'
+      }
+      ---
+      code: 500
+      body: failed
+      times: 2
+      ---
+      code: 200
+      body: ```
+            {
+                "data": [
+                    {
+                        "id": "testcharm",
+                        "name": "TestCharm"
+                    }
+                ]
+            }
+            ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          retry-list-dataset_done.txt: ```
+                                       Scenario: retry list dataset - retry list dataset scenario
+                                         Given retry list dataset step
+                                       ```
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { GET[/dify/v1/datasets]: {...}}
+        : [{...} {...} {...}]
+
+        系统日志::filter: { message: '上传成功: retry-list-dataset.txt' }
+        : { ::size= 1 }
+
+      }
+      """
+
+  场景: listDocuments返回500时自动重试
+    假如存在"Feature文件":
+      """
+      fileName: 'retry-list-doc.feature'
+      content: ```
+               Feature: retry list doc
+
+                 Scenario: retry list doc scenario
+                   Given retry list doc step
+               ```
+      """
+    假如Mock API:
+      """
+      : {
+        path.value= '/dify/v1/datasets/testcharm/documents'
+        method.value= 'GET'
+      }
+      ---
+      code: 500
+      body: failed
+      times: 2
+      ---
+      code: 200
+      body: ```
+            {
+                "data": [
+                    {
+                        "id": "feature-file"
+                    }
+                ]
+            }
+            ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      {}
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          retry-list-doc_done.txt: ```
+                                   Scenario: retry list doc - retry list doc scenario
+                                     Given retry list doc step
+                                   ```
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { GET[/dify/v1/datasets/testcharm/documents]: {...}}
+        : [{...} {...} {...}]
+
+        系统日志::filter: { message: '上传成功: retry-list-doc.txt' }
+        : { ::size= 1 }
+
+      }
+      """
+
   场景: 上传失败时打印错误日志包含文件名和响应内容
     假如存在"Feature文件":
       """
