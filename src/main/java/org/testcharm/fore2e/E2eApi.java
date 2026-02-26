@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Profile("test")
 public interface E2eApi {
 
-    @GetMapping("/mock/sleep-seconds")
+    @GetMapping("/e2e/sleep-seconds")
     void sleepSeconds(@RequestParam("seconds") long seconds);
 }

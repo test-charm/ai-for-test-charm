@@ -68,7 +68,7 @@ public class Beans {
 
         @Override
         public <T> Collection<T> queryAll(Class<T> type) {
-            return (Collection<T>) Arrays.stream(mockServerClient.retrieveRecordedRequests(request().withPath("/mock/sleep-seconds")))
+            return (Collection<T>) Arrays.stream(mockServerClient.retrieveRecordedRequests(request().withPath("/e2e/sleep-seconds")))
                     .map(this::requestAsWaitingTime).toList();
         }
 
