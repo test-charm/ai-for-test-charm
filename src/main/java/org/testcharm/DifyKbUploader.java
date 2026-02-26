@@ -72,7 +72,11 @@ public class DifyKbUploader {
     }
 
     private String findDatasetId(String datasetName) {
-        return callWithRetry(() -> difyApiClient.listDatasets()).getData().get(0).getId();
+        return callWithRetry(() -> difyApiClient.listDatasets(datasetName)).getData().stream()
+                .filter(item -> datasetName.equals(item.getName()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Dataset not found: " + datasetName))
+                .getId();
     }
 
     private String findDocumentId(String datasetId, String keyword) {

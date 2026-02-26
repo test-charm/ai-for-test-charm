@@ -17,7 +17,7 @@ import java.util.List;
 public interface DifyApiClient {
 
     @GetMapping(value = "/datasets", produces = "application/json", consumes = "application/json")
-    DataListResponse listDatasets();
+    DataListResponse listDatasets(@RequestParam("keyword") String keyword);
 
     @GetMapping(value = "/datasets/{datasetId}/documents", produces = "application/json", consumes = "application/json")
     DataListResponse listDocuments(@PathVariable("datasetId") String datasetId,

@@ -175,6 +175,13 @@
       并且数据应为ex:
         """
         : {
+          MockApi::filter: { GET[/dify/v1/datasets]: {...}}
+          : {
+            params: {
+              keyword: 'JFactory'
+            }
+          }
+
           MockApi::filter: { GET[/dify/v1/datasets/2200ec1f-fd85-402f-8afc-a3052135a105/documents]: {...}}
           : {
             params: {
@@ -209,6 +216,74 @@
           系统日志::filter: { message: '上传成功: test-charm.txt' }
           : { ::size= 1 }
 
+        }
+        """
+
+    场景: 查询Dataset时按名称精确匹配
+      假如存在"Feature文件":
+        """
+        fileName: 'exact-match.feature'
+        content: ```
+                 Feature: exact match
+
+                   Scenario: exact match scenario
+                     Given exact match step
+                 ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "testcharm-extended",
+                          "name": "TestCharm-Extended"
+                      },
+                      {
+                          "id": "testcharm",
+                          "name": "TestCharm"
+                      }
+                  ]
+              }
+              ```
+        """
+      当用以下"命令行参数"执行时:
+        """
+        {}
+        """
+      那么输出的文件应为:
+        """
+        : {
+          TestCharm: {
+            exact-match_done.txt: ```
+                                  Scenario: exact match - exact match scenario
+                                    Given exact match step
+                                  ```
+          }
+        }
+        """
+      并且数据应为ex:
+        """
+        : {
+          MockApi::filter: { GET[/dify/v1/datasets]: {...}}
+          : {
+            params: {
+              keyword: 'TestCharm'
+            }
+          }
+
+          MockApi::filter: { GET[/dify/v1/datasets/testcharm/documents]: {...}}
+          : {
+            params: {
+              keyword: 'exact-match.txt'
+            }
+          }
         }
         """
 
