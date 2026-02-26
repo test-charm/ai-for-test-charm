@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.testcharm.e2e.entity.FeatureFile;
+import org.testcharm.e2e.entity.OutputFile;
 import org.testcharm.e2e.entity.WaitingTime;
 
 import java.io.IOException;
@@ -50,6 +51,7 @@ public class Beans {
     public JFactory factorySet(TempFiles tempFiles, DALMockServer dalMockServer, MockServerClient mockServerClient) {
         var jFactory = new JFactory(new CompositeDataRepository(new MemoryDataRepository())
                 .registerByType(FeatureFile.class, new FeatureFileDataRepository(tempFiles))
+                .registerByType(OutputFile.class, new OutputFileDataRepository(tempFiles))
                 .registerByType(HttpRequest.class, new MockServerDataRepository(dalMockServer))
                 .registerByType(LoggingEvent.class, new LoggingEventDataRepository(mockServerClient))
                 .registerByType(WaitingTime.class, new WaitingTimeDataRepository(mockServerClient)));
@@ -184,6 +186,33 @@ public class Beans {
         public void save(Object object) {
             if (object instanceof FeatureFile featureFile) {
                 tempFiles.createWithContent("input/" + featureFile.getFileName(), featureFile.getContent().replaceAll("'''", "\"\"\""));
+            }
+        }
+    }
+
+    public static class OutputFileDataRepository implements DataRepository {
+
+        private final TempFiles tempFiles;
+
+        public OutputFileDataRepository(TempFiles tempFiles) {
+            this.tempFiles = tempFiles;
+        }
+
+        @Override
+        public <T> Collection<T> queryAll(Class<T> type) {
+            return List.of();
+        }
+
+        @Override
+        public void clear() {
+
+        }
+
+        @SneakyThrows
+        @Override
+        public void save(Object object) {
+            if (object instanceof OutputFile outputFile) {
+                tempFiles.createWithContent("output/TestCharm/" + outputFile.getFileName(), outputFile.getContent());
             }
         }
     }

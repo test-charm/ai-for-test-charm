@@ -47,6 +47,9 @@ public class ProcessKbSteps {
         if (cmdArg.isDisableUpload()) {
             argList.add("--disable-upload");
         }
+        if (cmdArg.isUploadOnly()) {
+            argList.add("--upload-only");
+        }
         argList.add("--retry-count=" + cmdArg.getRetryCount());
         argList.add("--spring.profiles.active=test");
 

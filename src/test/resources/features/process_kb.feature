@@ -152,7 +152,7 @@
       """
       : {
         JFactory: {
-          test-charm.txt: ```
+          test-charm_done.txt: ```
                           Scenario: query data - Query data use jfactory
                             Given "Orders":
                               | id | code |
@@ -259,10 +259,10 @@
       """
       : {
         TestCharm: {
-          new-file.txt: ```
-                        Scenario: new feature - new scenario
-                          Given new step
-                        ```
+          new-file_done.txt: ```
+                             Scenario: new feature - new scenario
+                               Given new step
+                             ```
         }
       }
       """
@@ -304,10 +304,10 @@
       """
       : {
         TestCharm: {
-          rule.txt: ```
-                    Scenario: feature X - rule Y - scenario Z
-                      Given step Z
-                    ```
+          rule_done.txt: ```
+                         Scenario: feature X - rule Y - scenario Z
+                           Given step Z
+                         ```
         }
       }
       """
@@ -341,14 +341,14 @@
       """
       : {
         TestCharm: {
-          a.txt: ```
-                 Scenario: feature A - scenario A
-                   Given step A
-                 ```
-          sub-b.txt: ```
-                     Scenario: feature B - scenario B
-                       Given step B
-                     ```
+          a_done.txt: ```
+                      Scenario: feature A - scenario A
+                        Given step A
+                      ```
+          sub-b_done.txt: ```
+                          Scenario: feature B - scenario B
+                            Given step B
+                          ```
         }
       }
       """
@@ -422,14 +422,14 @@
       """
       : {
         TestCharm: {
-          dir1-common.txt: ```
-                           Scenario: feature in dir1 - scenario in dir1
-                             Given step in dir1
-                           ```
-          dir2-common.txt: ```
-                           Scenario: feature in dir2 - scenario in dir2
-                             Given step in dir2
-                           ```
+          dir1-common_done.txt: ```
+                                Scenario: feature in dir1 - scenario in dir1
+                                  Given step in dir1
+                                ```
+          dir2-common_done.txt: ```
+                                Scenario: feature in dir2 - scenario in dir2
+                                  Given step in dir2
+                                ```
         }
       }
       """
@@ -455,10 +455,10 @@
       """
       : {
         TestCharm: {
-          tagged.txt: ```
-                      Scenario: feature with tags - scenario X
-                        Given step X
-                      ```
+          tagged_done.txt: ```
+                           Scenario: feature with tags - scenario X
+                             Given step X
+                           ```
         }
       }
       """
@@ -483,10 +483,10 @@
       """
       : {
         TestCharm: {
-          scenario-tag.txt: ```
-                            Scenario: feature Y - scenario Y
-                              Given step Y
-                            ```
+          scenario-tag_done.txt: ```
+                                 Scenario: feature Y - scenario Y
+                                   Given step Y
+                                 ```
         }
       }
       """
@@ -513,13 +513,13 @@
       """
       : {
         TestCharm: {
-          multi-scenario.txt: ```
-                              Scenario: multi scenario - first
-                                Given step 1
+          multi-scenario_done.txt: ```
+                                   Scenario: multi scenario - first
+                                     Given step 1
 
-                              Scenario: multi scenario - second
-                                Given step 2
-                              ```
+                                   Scenario: multi scenario - second
+                                     Given step 2
+                                   ```
         }
       }
       """
@@ -563,10 +563,10 @@
       """
       : {
         TestCharm: {
-          retry-update.txt: ```
-                            Scenario: retry update - retry update scenario
-                              Given retry update step
-                            ```
+          retry-update_done.txt: ```
+                                 Scenario: retry update - retry update scenario
+                                   Given retry update step
+                                 ```
         }
       }
       """
@@ -634,10 +634,10 @@
       """
       : {
         TestCharm: {
-          retry-create.txt: ```
-                            Scenario: retry create - retry create scenario
-                              Given retry create step
-                            ```
+          retry-create_done.txt: ```
+                                 Scenario: retry create - retry create scenario
+                                   Given retry create step
+                                 ```
         }
       }
       """
@@ -713,6 +713,82 @@
                           Given no upload step
                         ```
         }
+      }
+      """
+
+  场景: --upload-only跳过文件生成只上传已有文件
+    假如存在"输出文件":
+      """
+      fileName: 'pre-existing.txt'
+      content: 'pre-existing content'
+      """
+    当用以下"命令行参数"执行时:
+      """
+      uploadOnly: true
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          pre-existing_done.txt= 'pre-existing content'
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { POST[/dify/v1/datasets/testcharm/documents/feature-file/update-by-file]: {...}}
+        : [{
+          formData: [{
+            fieldName= file
+            name= 'pre-existing.txt'
+            inputStream.string= 'pre-existing content'
+          }]
+        }]
+
+        系统日志::filter: { message: '上传成功: pre-existing.txt' }
+        : { ::size= 1 }
+      }
+      """
+
+  场景: --upload-only时跳过_done文件
+    假如存在"输出文件":
+      """
+      fileName: 'already-done_done.txt'
+      content: 'done content'
+      """
+    假如存在"输出文件":
+      """
+      fileName: 'not-done-yet.txt'
+      content: 'pending content'
+      """
+    当用以下"命令行参数"执行时:
+      """
+      uploadOnly: true
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm: {
+          already-done_done.txt= 'done content'
+          not-done-yet_done.txt= 'pending content'
+        }
+      }
+      """
+    并且数据应为ex:
+      """
+      : {
+        MockApi::filter: { POST[/dify/v1/datasets/testcharm/documents/feature-file/update-by-file]: {...}}
+        : [{
+          formData: [{
+            fieldName= file
+            name= 'not-done-yet.txt'
+            inputStream.string= 'pending content'
+          }]
+        }]
+
+        系统日志::filter: { message: '上传成功: not-done-yet.txt' }
+        : { ::size= 1 }
       }
       """
 

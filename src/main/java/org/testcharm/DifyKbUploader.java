@@ -28,6 +28,7 @@ public class DifyKbUploader {
         String datasetId = findDatasetId(datasetName);
         try (Stream<Path> files = Files.walk(outputDir)) {
             files.filter(Files::isRegularFile)
+                    .filter(file -> !file.getFileName().toString().endsWith("_done.txt"))
                     .forEach(file -> uploadFile(datasetId, file));
         }
     }
@@ -56,6 +57,7 @@ public class DifyKbUploader {
                 }
             });
             log.info("上传成功: {}", fileName);
+            renameToDone(file);
         } catch (FeignException e) {
             log.error("上传失败: {}, response: {}", fileName, e.contentUTF8(), e);
             throw e;
@@ -79,5 +81,12 @@ public class DifyKbUploader {
                 }
             }
         }
+    }
+
+    @SneakyThrows
+    private void renameToDone(Path file) {
+        String fileName = file.getFileName().toString();
+        String doneName = fileName.replaceFirst("\\.txt$", "_done.txt");
+        Files.move(file, file.resolveSibling(doneName));
     }
 }

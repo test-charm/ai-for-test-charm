@@ -32,6 +32,9 @@ public class Application implements CommandLineRunner {
     @Option(names = "--disable-upload")
     private boolean disableUpload;
 
+    @Option(names = "--upload-only")
+    private boolean uploadOnly;
+
     @Option(names = "--retry-count", defaultValue = "3")
     private int retryCount;
 
@@ -42,7 +45,9 @@ public class Application implements CommandLineRunner {
     @Override
     public void run(String... args) {
         new CommandLine(this).setUnmatchedArgumentsAllowed(true).parseArgs(args);
-        kbProcessor.process(src, dst);
+        if (!uploadOnly) {
+            kbProcessor.process(src, dst);
+        }
         if (!disableUpload) {
             String datasetName = Paths.get(dst).getFileName().toString();
             difyKbUploader.setRetryCount(retryCount);
