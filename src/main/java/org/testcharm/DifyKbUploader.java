@@ -57,7 +57,7 @@ public class DifyKbUploader {
     @SneakyThrows
     private int countScenarios(Path file) {
         return (int) Files.readAllLines(file).stream()
-                .filter(line -> line.trim().startsWith("Scenario:"))
+                .filter(line -> line.trim().startsWith("Scenario:") || line.trim().startsWith("Scenario Outline:"))
                 .count();
     }
 

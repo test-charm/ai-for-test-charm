@@ -949,7 +949,7 @@
 
   Rule: 验证模式
 
-    场景: --verify验证通过时退出码为0
+    场景: --verify验证通过时退出码为0（包含Scenario Outline）
       假如存在"Feature文件":
         """
         fileName: 'verified.feature'
@@ -959,8 +959,12 @@
                    Scenario: scenario 1
                      Given step 1
 
-                   Scenario: scenario 2
-                     Given step 2
+                   Scenario Outline: scenario outline 1
+                     Given step <param>
+
+                   Examples:
+                     | param |
+                     | a     |
                  ```
         """
       假如Mock API:
