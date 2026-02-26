@@ -1,7 +1,7 @@
-package org.testcharm.cucumber.spec;
+package org.testcharm.e2e.spec;
 
 import com.github.leeonky.jfactory.Spec;
-import org.testcharm.cucumber.DALMockServer;
+import org.testcharm.e2e.DALMockServer;
 
 public class ResponseBuilders {
     public static class DefaultResponseBuilder extends Spec<DALMockServer.ResponseBuilder> {

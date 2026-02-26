@@ -1,4 +1,4 @@
-package org.testcharm.cucumber;
+package org.testcharm.e2e;
 
 import com.github.leeonky.jfactory.cucumber.JData;
 import com.github.leeonky.jfactory.cucumber.Table;

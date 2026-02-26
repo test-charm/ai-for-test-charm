@@ -1,4 +1,4 @@
-package org.testcharm.cucumber.spec;
+package org.testcharm.e2e.spec;
 
 import ch.qos.logback.classic.spi.LoggingEvent;
 import com.github.leeonky.jfactory.Spec;

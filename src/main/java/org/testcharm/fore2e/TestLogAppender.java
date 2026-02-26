@@ -1,4 +1,4 @@
-package org.testcharm;
+package org.testcharm.fore2e;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;

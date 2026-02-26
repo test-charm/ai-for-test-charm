@@ -20,6 +20,9 @@ public class DifyKbUploader {
     @Setter
     private int retryCount = 3;
 
+    @Autowired
+    private Waiting waiting;
+
     @SneakyThrows
     public void upload(String datasetName, Path outputDir) {
         String datasetId = findDatasetId(datasetName);
@@ -60,6 +63,7 @@ public class DifyKbUploader {
             log.error("上传失败: {}", fileName, e);
             throw e;
         }
+        waiting.sleepSeconds(1);
     }
 
     private void executeWithRetry(Runnable action) {

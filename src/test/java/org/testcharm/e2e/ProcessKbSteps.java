@@ -1,4 +1,4 @@
-package org.testcharm.cucumber;
+package org.testcharm.e2e;
 
 import com.github.leeonky.dal.Assertions;
 import com.github.leeonky.jfactory.cucumber.JData;
@@ -10,7 +10,7 @@ import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testcharm.cucumber.entity.CmdArg;
+import org.testcharm.e2e.entity.CmdArg;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

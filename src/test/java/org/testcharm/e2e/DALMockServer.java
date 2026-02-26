@@ -1,4 +1,4 @@
-package org.testcharm.cucumber;
+package org.testcharm.e2e;
 
 import com.github.leeonky.dal.DAL;
 import com.github.leeonky.interpreter.InterpreterException;

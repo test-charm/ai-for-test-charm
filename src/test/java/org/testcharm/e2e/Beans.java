@@ -1,4 +1,4 @@
-package org.testcharm.cucumber;
+package org.testcharm.e2e;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.LoggingEvent;
@@ -19,7 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.testcharm.cucumber.entity.FeatureFile;
+import org.testcharm.e2e.entity.FeatureFile;
+import org.testcharm.e2e.entity.WaitingTime;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -31,7 +32,7 @@ import java.util.List;
 import static org.mockserver.model.HttpRequest.request;
 
 @Configuration
-public class Factories {
+public class Beans {
 
     @Bean
     @ConditionalOnMissingBean({MockServerClient.class})
@@ -50,9 +51,40 @@ public class Factories {
         var jFactory = new JFactory(new CompositeDataRepository(new MemoryDataRepository())
                 .registerByType(FeatureFile.class, new FeatureFileDataRepository(tempFiles))
                 .registerByType(HttpRequest.class, new MockServerDataRepository(dalMockServer))
-                .registerByType(LoggingEvent.class, new LoggingEventDataRepository(mockServerClient)));
-        Classes.subTypesOf(Spec.class, "org.testcharm.cucumber.spec").forEach(c -> jFactory.register((Class) c));
+                .registerByType(LoggingEvent.class, new LoggingEventDataRepository(mockServerClient))
+                .registerByType(WaitingTime.class, new WaitingTimeDataRepository(mockServerClient)));
+        Classes.subTypesOf(Spec.class, "org.testcharm.e2e.spec").forEach(c -> jFactory.register((Class) c));
         return jFactory;
+    }
+
+    public static class WaitingTimeDataRepository implements DataRepository {
+        private final MockServerClient mockServerClient;
+
+        public WaitingTimeDataRepository(MockServerClient mockServerClient) {
+            this.mockServerClient = mockServerClient;
+        }
+
+        @Override
+        public <T> Collection<T> queryAll(Class<T> type) {
+            return (Collection<T>) Arrays.stream(mockServerClient.retrieveRecordedRequests(request().withPath("/mock/sleep-seconds")))
+                    .map(this::requestAsWaitingTime).toList();
+        }
+
+        @Override
+        public void clear() {
+
+        }
+
+        @Override
+        public void save(Object object) {
+
+        }
+
+        @SneakyThrows
+        private WaitingTime requestAsWaitingTime(HttpRequest httpRequest) {
+            return new WaitingTime().setSeconds(Long.parseLong(httpRequest.getFirstQueryStringParameter("seconds")));
+        }
+
     }
 
     public static class LoggingEventDataRepository implements DataRepository {
