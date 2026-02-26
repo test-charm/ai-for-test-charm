@@ -59,7 +59,22 @@ public class Beans {
         return jFactory;
     }
 
-    public static class WaitingTimeDataRepository implements DataRepository {
+    public static abstract class AbstractDataRepository implements DataRepository {
+        @Override
+        public <T> Collection<T> queryAll(Class<T> type) {
+            return List.of();
+        }
+
+        @Override
+        public void clear() {
+        }
+
+        @Override
+        public void save(Object object) {
+        }
+    }
+
+    public static class WaitingTimeDataRepository extends AbstractDataRepository {
         private final MockServerClient mockServerClient;
 
         public WaitingTimeDataRepository(MockServerClient mockServerClient) {
@@ -72,24 +87,13 @@ public class Beans {
                     .map(this::requestAsWaitingTime).toList();
         }
 
-        @Override
-        public void clear() {
-
-        }
-
-        @Override
-        public void save(Object object) {
-
-        }
-
         @SneakyThrows
         private WaitingTime requestAsWaitingTime(HttpRequest httpRequest) {
             return new WaitingTime().setSeconds(Long.parseLong(httpRequest.getFirstQueryStringParameter("seconds")));
         }
-
     }
 
-    public static class LoggingEventDataRepository implements DataRepository {
+    public static class LoggingEventDataRepository extends AbstractDataRepository {
         private final MockServerClient mockServerClient;
 
         public LoggingEventDataRepository(MockServerClient mockServerClient) {
@@ -116,16 +120,6 @@ public class Beans {
             return objectMapper.readValue(httpRequest.getBodyAsString(), LoggingEvent.class);
         }
 
-        @Override
-        public void clear() {
-
-        }
-
-        @Override
-        public void save(Object object) {
-
-        }
-
         public static class LevelDeserializer extends StdDeserializer<Level> {
 
             protected LevelDeserializer() {
@@ -139,7 +133,7 @@ public class Beans {
         }
     }
 
-    public static class MockServerDataRepository implements DataRepository {
+    public static class MockServerDataRepository extends AbstractDataRepository {
 
         private final DALMockServer dalMockServer;
 
@@ -151,34 +145,14 @@ public class Beans {
         public <T> Collection<T> queryAll(Class<T> type) {
             return (Collection<T>) dalMockServer.requests();
         }
-
-        @Override
-        public void clear() {
-
-        }
-
-        @Override
-        public void save(Object object) {
-
-        }
     }
 
-    public static class FeatureFileDataRepository implements DataRepository {
+    public static class FeatureFileDataRepository extends AbstractDataRepository {
 
         private final TempFiles tempFiles;
 
         public FeatureFileDataRepository(TempFiles tempFiles) {
             this.tempFiles = tempFiles;
-        }
-
-        @Override
-        public <T> Collection<T> queryAll(Class<T> type) {
-            return List.of();
-        }
-
-        @Override
-        public void clear() {
-
         }
 
         @SneakyThrows
@@ -190,22 +164,12 @@ public class Beans {
         }
     }
 
-    public static class OutputFileDataRepository implements DataRepository {
+    public static class OutputFileDataRepository extends AbstractDataRepository {
 
         private final TempFiles tempFiles;
 
         public OutputFileDataRepository(TempFiles tempFiles) {
             this.tempFiles = tempFiles;
-        }
-
-        @Override
-        public <T> Collection<T> queryAll(Class<T> type) {
-            return List.of();
-        }
-
-        @Override
-        public void clear() {
-
         }
 
         @SneakyThrows
