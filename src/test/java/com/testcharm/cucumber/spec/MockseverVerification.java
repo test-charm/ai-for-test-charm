@@ -1,4 +1,4 @@
-package com.testcharm.spec;
+package com.testcharm.cucumber.spec;
 
 import com.github.leeonky.jfactory.Spec;
 import org.mockserver.model.HttpRequest;

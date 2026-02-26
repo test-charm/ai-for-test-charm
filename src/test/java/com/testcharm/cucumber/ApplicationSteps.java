@@ -1,4 +1,4 @@
-package com.testcharm;
+package com.testcharm.cucumber;
 
 import com.github.leeonky.dal.Assertions;
 import io.cucumber.java.Before;

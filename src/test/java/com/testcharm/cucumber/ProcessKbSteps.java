@@ -1,14 +1,15 @@
-package com.testcharm;
+package com.testcharm.cucumber;
 
 import com.github.leeonky.dal.Assertions;
 import com.github.leeonky.jfactory.cucumber.JData;
 import com.github.leeonky.jfactory.cucumber.Table;
-import com.testcharm.entity.CmdArg;
+import com.testcharm.cucumber.entity.CmdArg;
 import io.cucumber.java.Before;
 import io.cucumber.java.zh_cn.并且;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Files;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class ProcessKbSteps {
 
     @Autowired
@@ -38,15 +40,6 @@ public class ProcessKbSteps {
     }
 
     @SneakyThrows
-    @当("用以下{string}执行时允许失败:")
-    public void executeWithAllowFailure(String traitAndSpec, Table table) {
-        try {
-            execute(traitAndSpec, table);
-        } catch (Exception ignored) {
-        }
-    }
-
-    @SneakyThrows
     private void execute(String traitAndSpec, Table table) {
         List<CmdArg> args = jData.prepare(traitAndSpec, table);
         CmdArg cmdArg = args.get(0);
@@ -65,7 +58,7 @@ public class ProcessKbSteps {
         Process process = pb.start();
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            throw new RuntimeException("jar process exited with code " + exitCode);
+            log.error("jar process exited with code {}", exitCode);
         }
     }
 

@@ -25,21 +25,19 @@ public class Application implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (args.length >= 2) {
-            var src = args[0];
-            var dst = args[1];
-            boolean disableUpload = Arrays.asList(args).contains("--disable-upload");
-            int retryCount = Arrays.stream(args)
-                    .filter(a -> a.startsWith("--retry-count="))
-                    .findFirst()
-                    .map(a -> Integer.parseInt(a.substring("--retry-count=".length())))
-                    .orElse(3);
-            kbProcessor.process(src, dst);
-            if (!disableUpload) {
-                String datasetName = Paths.get(dst).getFileName().toString();
-                difyKbUploader.setRetryCount(retryCount);
-                difyKbUploader.upload(datasetName, Paths.get(dst));
-            }
+        var src = args[0];
+        var dst = args[1];
+        boolean disableUpload = Arrays.asList(args).contains("--disable-upload");
+        int retryCount = Arrays.stream(args)
+                .filter(a -> a.startsWith("--retry-count="))
+                .findFirst()
+                .map(a -> Integer.parseInt(a.substring("--retry-count=".length())))
+                .orElse(3);
+        kbProcessor.process(src, dst);
+        if (!disableUpload) {
+            String datasetName = Paths.get(dst).getFileName().toString();
+            difyKbUploader.setRetryCount(retryCount);
+            difyKbUploader.upload(datasetName, Paths.get(dst));
         }
     }
 }

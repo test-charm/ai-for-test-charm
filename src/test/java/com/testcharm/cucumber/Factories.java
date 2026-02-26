@@ -1,4 +1,4 @@
-package com.testcharm;
+package com.testcharm.cucumber;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.LoggingEvent;
@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.leeonky.jfactory.*;
 import com.github.leeonky.util.Classes;
-import com.testcharm.entity.FeatureFile;
+import com.testcharm.cucumber.entity.FeatureFile;
 import lombok.SneakyThrows;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.model.HttpRequest;
@@ -51,7 +51,7 @@ public class Factories {
                 .registerByType(FeatureFile.class, new FeatureFileDataRepository(tempFiles))
                 .registerByType(HttpRequest.class, new MockServerDataRepository(dalMockServer))
                 .registerByType(LoggingEvent.class, new LoggingEventDataRepository(mockServerClient)));
-        Classes.subTypesOf(Spec.class, "com.testcharm.spec").forEach(c -> jFactory.register((Class) c));
+        Classes.subTypesOf(Spec.class, "com.testcharm.cucumber.spec").forEach(c -> jFactory.register((Class) c));
         return jFactory;
     }
 

@@ -672,7 +672,7 @@
       code: 403
       body: 'Forbidden: you have been blocked'
       """
-    当用以下"命令行参数"执行时允许失败:
+    当用以下"命令行参数"执行时:
       """
       retryCount: 0
       """

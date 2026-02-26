@@ -1,4 +1,4 @@
-package com.testcharm.entity;
+package com.testcharm.cucumber.entity;
 
 import lombok.Getter;
 import lombok.Setter;
