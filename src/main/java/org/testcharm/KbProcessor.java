@@ -6,9 +6,11 @@ import io.cucumber.messages.Messages;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -19,6 +21,14 @@ public class KbProcessor {
     public void process(String srcDir, String dstDir) {
         Path srcPath = Paths.get(srcDir);
         Path dstPath = Paths.get(dstDir);
+        if (Files.exists(dstPath)) {
+            try (Stream<Path> walk = Files.walk(dstPath)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .filter(f -> !f.toPath().equals(dstPath))
+                        .forEach(File::delete);
+            }
+        }
         Files.createDirectories(dstPath);
 
         try (Stream<Path> files = Files.walk(srcPath)) {

@@ -8,9 +8,6 @@ OUTPUT_DIR="/tmp/ai_for_test_charm/output/$DATASET_NAME"
 
 : "${PROD_DIFY_DATASET_API_KEY:?请设置环境变量 PROD_DIFY_DATASET_API_KEY}"
 
-echo "==> 清理输出目录 $OUTPUT_DIR"
-rm -rf "$OUTPUT_DIR"
-
 echo "==> 构建 bootJar"
 ./gradlew bootJar --quiet
 

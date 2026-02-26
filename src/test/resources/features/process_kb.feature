@@ -810,6 +810,38 @@
       }
       """
 
+  场景: 输出文件前清理output子目录
+    假如存在"输出文件":
+      """
+      fileName: 'old-file.txt'
+      content: 'old content'
+      """
+    假如存在"Feature文件":
+      """
+      fileName: 'new-file.feature'
+      content: ```
+               Feature: new feature
+
+                 Scenario: new scenario
+                   Given new step
+               ```
+      """
+    当用以下"命令行参数"执行时:
+      """
+      disableUpload: true
+      """
+    那么输出的文件应为:
+      """
+      : {
+        TestCharm= {
+          new-file.txt: ```
+                        Scenario: new feature - new scenario
+                          Given new step
+                        ```
+        }
+      }
+      """
+
   场景: 使用--disable-upload时不上传到Dify
     假如存在"Feature文件":
       """
