@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -23,6 +24,42 @@ public class DifyKbUploader {
 
     @Autowired
     private Waiting waiting;
+
+    @SneakyThrows
+    public boolean verify(String datasetName, Path outputDir) {
+        String datasetId = findDatasetId(datasetName);
+        boolean allMatch = true;
+        try (Stream<Path> files = Files.walk(outputDir)) {
+            List<Path> outputFiles = files.filter(Files::isRegularFile)
+                    .filter(f -> f.toString().endsWith(".txt"))
+                    .sorted()
+                    .toList();
+            for (Path file : outputFiles) {
+                String fileName = file.getFileName().toString();
+                String difyFileName = fileName.replace("_done.txt", ".txt");
+                int scenarioCount = countScenarios(file);
+                String documentId = findDocumentId(datasetId, difyFileName);
+                int segmentCount = 0;
+                if (documentId != null) {
+                    segmentCount = callWithRetry(() -> difyApiClient.listSegments(datasetId, documentId)).getData().size();
+                }
+                if (scenarioCount == segmentCount) {
+                    log.info("{}: 本地 {} 个场景, Dify {} 个分段 - 一致", difyFileName, scenarioCount, segmentCount);
+                } else {
+                    log.error("{}: 本地 {} 个场景, Dify {} 个分段 - 不一致", difyFileName, scenarioCount, segmentCount);
+                    allMatch = false;
+                }
+            }
+        }
+        return allMatch;
+    }
+
+    @SneakyThrows
+    private int countScenarios(Path file) {
+        return (int) Files.readAllLines(file).stream()
+                .filter(line -> line.trim().startsWith("Scenario:"))
+                .count();
+    }
 
     @SneakyThrows
     public void upload(String datasetName, Path outputDir) {

@@ -9,5 +9,6 @@ public class CmdArg {
     private String src, dst;
     private boolean disableUpload;
     private boolean uploadOnly;
+    private boolean verify;
     private int retryCount;
 }

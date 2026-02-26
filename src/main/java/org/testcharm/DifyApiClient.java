@@ -35,6 +35,11 @@ public interface DifyApiClient {
     void createDocumentByFile(@PathVariable("datasetId") String datasetId,
                               @RequestPart("file") feign.form.FormData file);
 
+    @GetMapping(value = "/datasets/{datasetId}/documents/{documentId}/segments",
+            produces = "application/json", consumes = "application/json")
+    DataListResponse listSegments(@PathVariable("datasetId") String datasetId,
+                                  @PathVariable("documentId") String documentId);
+
     @Data
     class DataListResponse {
         private List<DataItem> data;

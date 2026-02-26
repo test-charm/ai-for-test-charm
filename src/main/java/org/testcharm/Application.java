@@ -35,6 +35,9 @@ public class Application implements CommandLineRunner {
     @Option(names = "--upload-only")
     private boolean uploadOnly;
 
+    @Option(names = "--verify")
+    private boolean verify;
+
     @Option(names = "--retry-count", defaultValue = "3")
     private int retryCount;
 
@@ -48,10 +51,17 @@ public class Application implements CommandLineRunner {
         if (!uploadOnly) {
             kbProcessor.process(src, dst);
         }
-        if (!disableUpload) {
+        if (!disableUpload && !verify) {
             String datasetName = Paths.get(dst).getFileName().toString();
             difyKbUploader.setRetryCount(retryCount);
             difyKbUploader.upload(datasetName, Paths.get(dst));
+        }
+        if (verify) {
+            String datasetName = Paths.get(dst).getFileName().toString();
+            difyKbUploader.setRetryCount(retryCount);
+            if (!difyKbUploader.verify(datasetName, Paths.get(dst))) {
+                throw new RuntimeException("验证失败");
+            }
         }
     }
 }

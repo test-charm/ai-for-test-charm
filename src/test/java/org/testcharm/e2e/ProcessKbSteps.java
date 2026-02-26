@@ -27,6 +27,7 @@ public class ProcessKbSteps {
     private TempFiles tempFiles;
 
     private String dstPath;
+    private int lastExitCode;
 
     @Before
     public void cleanUp() {
@@ -50,6 +51,9 @@ public class ProcessKbSteps {
         if (cmdArg.isUploadOnly()) {
             argList.add("--upload-only");
         }
+        if (cmdArg.isVerify()) {
+            argList.add("--verify");
+        }
         argList.add("--retry-count=" + cmdArg.getRetryCount());
         argList.add("--spring.profiles.active=test");
 
@@ -60,6 +64,7 @@ public class ProcessKbSteps {
         pb.inheritIO();
         Process process = pb.start();
         int exitCode = process.waitFor();
+        lastExitCode = exitCode;
         if (exitCode != 0) {
             log.error("jar process exited with code {}", exitCode);
         }
@@ -78,6 +83,13 @@ public class ProcessKbSteps {
     @那么("输出的文件应为:")
     public void verifyOutputFiles(String docString) {
         Assertions.expect(tempFiles.getAbsolutePath("output")).should(docString.replaceAll("'''", "\"\"\""));
+    }
+
+    @那么("退出码应为 {int}")
+    public void 退出码应为(int expectedExitCode) {
+        if (lastExitCode != expectedExitCode) {
+            throw new AssertionError("Expected exit code " + expectedExitCode + " but was " + lastExitCode);
+        }
     }
 
     @并且("数据应为ex:")

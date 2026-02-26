@@ -947,3 +947,261 @@
         }
         """
 
+  Rule: 验证模式
+
+    场景: --verify验证通过时退出码为0
+      假如存在"Feature文件":
+        """
+        fileName: 'verified.feature'
+        content: ```
+                 Feature: verified feature
+
+                   Scenario: scenario 1
+                     Given step 1
+
+                   Scenario: scenario 2
+                     Given step 2
+                 ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "testcharm",
+                          "name": "TestCharm"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "doc-verified"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents/doc-verified/segments'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {"id": "seg1"},
+                      {"id": "seg2"}
+                  ]
+              }
+              ```
+        """
+      当用以下"命令行参数"执行时:
+        """
+        verify: true
+        """
+      那么退出码应为 0
+      并且数据应为ex:
+        """
+        : {
+          系统日志::filter: { message: /verified.txt.*一致/ }
+          : { ::size= 1 }
+        }
+        """
+
+    场景: --verify验证不通过时退出码为1
+      假如存在"Feature文件":
+        """
+        fileName: 'mismatched.feature'
+        content: ```
+                 Feature: mismatched feature
+
+                   Scenario: scenario 1
+                     Given step 1
+
+                   Scenario: scenario 2
+                     Given step 2
+                 ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "testcharm",
+                          "name": "TestCharm"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "doc-mismatched"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents/doc-mismatched/segments'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {"id": "seg1"},
+                      {"id": "seg2"},
+                      {"id": "seg3"}
+                  ]
+              }
+              ```
+        """
+      当用以下"命令行参数"执行时:
+        """
+        verify: true
+        """
+      那么退出码应为 1
+      并且数据应为ex:
+        """
+        : {
+          系统日志::filter: { message: /mismatched.txt.*不一致/ }
+          : { ::size= 1 }
+        }
+        """
+
+    场景: --verify多个文件时任一不一致则退出码为1
+      假如存在"Feature文件":
+        """
+        fileName: 'a-match.feature'
+        content: ```
+                 Feature: feature A
+
+                   Scenario: scenario A
+                     Given step A
+                 ```
+        """
+      假如存在"Feature文件":
+        """
+        fileName: 'b-mismatch.feature'
+        content: ```
+                 Feature: feature B
+
+                   Scenario: scenario B1
+                     Given step B1
+
+                   Scenario: scenario B2
+                     Given step B2
+                 ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "testcharm",
+                          "name": "TestCharm"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {
+                          "id": "doc-common"
+                      }
+                  ]
+              }
+              ```
+        """
+      假如Mock API:
+        """
+        : {
+          path.value= '/dify/v1/datasets/testcharm/documents/doc-common/segments'
+          method.value= 'GET'
+        }
+        ---
+        code: 200
+        body: ```
+              {
+                  "data": [
+                      {"id": "seg1"}
+                  ]
+              }
+              ```
+        """
+      当用以下"命令行参数"执行时:
+        """
+        verify: true
+        """
+      那么退出码应为 1
+      并且数据应为ex:
+        """
+        : {
+          系统日志::filter: { message: /a-match.txt.*一致/ }
+          : { ::size= 1 }
+
+          系统日志::filter: { message: /b-mismatch.txt.*不一致/ }
+          : { ::size= 1 }
+        }
+        """
+
