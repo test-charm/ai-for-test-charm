@@ -1,0 +1,12 @@
+services:
+  code-qa-agent:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${WORKSPACE_PATH:-.}:/workspace:ro
+    env_file:
+      - .env
+    environment:
+      - CQA_WORKSPACE_PATH=/workspace
+    restart: unless-stopped
