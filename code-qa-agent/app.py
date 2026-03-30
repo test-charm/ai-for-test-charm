@@ -1,4 +1,5 @@
 import logging
+import time
 import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
@@ -40,6 +41,7 @@ async def on_chat_resume(thread):
 @cl.on_message
 async def on_message(message: cl.Message):
     thread_id = cl.user_session.get("thread_id")
+    start = time.monotonic()
 
     msg = cl.Message(content="")
 
@@ -50,5 +52,13 @@ async def on_message(message: cl.Message):
             await msg.stream_token(name)
         elif event_type == "done":
             break
+
+    elapsed = time.monotonic() - start
+    minutes, seconds = divmod(int(elapsed), 60)
+    if minutes > 0:
+        time_str = f"{minutes}分{seconds}秒"
+    else:
+        time_str = f"{seconds}秒"
+    await msg.stream_token(f"\n\n---\n⏱️ 耗时 {time_str}")
 
     await msg.send()
