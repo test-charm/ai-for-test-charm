@@ -4,6 +4,7 @@ import chainlit as cl
 from chainlit.data.sql_alchemy import SQLAlchemyDataLayer
 
 from agent import create_agent
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +16,13 @@ def get_data_layer():
     return SQLAlchemyDataLayer(conninfo="sqlite+aiosqlite:///./data/chat_history.db")
 
 
-@cl.header_auth_callback
-async def header_auth(headers: dict) -> cl.User | None:
-    # Generate a stable user ID per browser via Chainlit's session cookie
-    # Each distinct browser gets its own chat history
-    import hashlib
-    raw = headers.get("cookie", "") or headers.get("user-agent", "anonymous")
-    uid = hashlib.sha256(raw.encode()).hexdigest()[:16]
-    return cl.User(identifier=f"user-{uid}", metadata={"role": "user"})
+@cl.password_auth_callback
+async def auth_callback(username: str, password: str) -> cl.User | None:
+    if settings.auth_password and password != settings.auth_password:
+        return None
+    if not username.strip():
+        return None
+    return cl.User(identifier=username.strip(), metadata={"role": "user"})
 
 
 @cl.on_chat_start

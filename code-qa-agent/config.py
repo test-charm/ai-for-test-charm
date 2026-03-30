@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     workspace_path: str = "/workspace"
     max_search_results: int = 50
     max_file_lines: int = 300
+    auth_password: str = ""
 
     model_config = {"env_prefix": "CQA_", "env_file": ".env"}
 
