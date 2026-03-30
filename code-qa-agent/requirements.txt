@@ -8,3 +8,4 @@ pydantic-settings>=2.0.0
 tree-sitter-languages>=1.10.0
 aiosqlite>=0.20.0
 sqlalchemy>=2.0.0
+mcp[cli]>=1.0.0

@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import uuid
 from typing import Any
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -183,6 +184,17 @@ class CodeQAAgent:
         # Max iterations reached
         yield ("token", "\n\n⚠️ Reached maximum iterations. Partial results above.", None)
         yield ("done", None, None)
+
+
+    async def ask(self, question: str, thread_id: str | None = None) -> str:
+        """Run the full ReAct loop and return the final answer (non-streaming)."""
+        if thread_id is None:
+            thread_id = str(uuid.uuid4())
+        answer = ""
+        async for event_type, token, _data in self.astream_response(question, thread_id):
+            if event_type == "token":
+                answer += token
+        return answer
 
 
 def create_agent() -> CodeQAAgent:

@@ -13,5 +13,19 @@ services:
       - CHAINLIT_AUTH_SECRET=79178fa6cfdb70f8916fc481030d22177fce99733e44416f22070f22cafc5177
     restart: unless-stopped
 
+  mcp-server:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - ${WORKSPACE_PATH:-.}:/workspace:ro
+    env_file:
+      - .env
+    environment:
+      - CQA_WORKSPACE_PATH=/workspace
+      - CQA_HOST_WORKSPACE_PATH=${WORKSPACE_PATH:-.}
+    command: python mcp_server.py --transport streamable-http --port 3001
+    restart: unless-stopped
+
 volumes:
   chat-data:
