@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /workspace
+RUN mkdir -p /workspace /app/data
 
 EXPOSE 8000
 
-CMD ["chainlit", "run", "app.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python init_db.py && chainlit run app.py --host 0.0.0.0 --port 8000"]

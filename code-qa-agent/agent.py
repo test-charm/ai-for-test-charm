@@ -60,18 +60,17 @@ Understood. I will use ```json tool blocks to explore the codebase. Let me start
 
 MAX_ITERATIONS = 100
 
-_TOOL_CALL_RE = re.compile(
-    r"```json\s*\n(\{[^`]*?\})\s*\n```",
-    re.DOTALL,
-)
-
-
 def _parse_tool_calls(text: str) -> list[dict]:
-    """Extract tool call JSON blocks from LLM output."""
+    """Extract tool call JSON objects from LLM output.
+    Handles: fenced ```json blocks, unclosed blocks, bare JSON lines."""
     calls = []
-    for m in _TOOL_CALL_RE.finditer(text):
+    # Match JSON objects with one level of nesting (for "args": {...})
+    for m in re.finditer(r'\{(?:[^{}]|\{[^{}]*\})*\}', text):
+        raw = m.group()
+        if '"tool"' not in raw:
+            continue
         try:
-            obj = json.loads(m.group(1))
+            obj = json.loads(raw)
             if "tool" in obj:
                 calls.append(obj)
         except json.JSONDecodeError:

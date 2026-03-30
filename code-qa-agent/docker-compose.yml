@@ -5,8 +5,13 @@ services:
       - "8000:8000"
     volumes:
       - ${WORKSPACE_PATH:-.}:/workspace:ro
+      - chat-data:/app/data
     env_file:
       - .env
     environment:
       - CQA_WORKSPACE_PATH=/workspace
+      - CHAINLIT_AUTH_SECRET=79178fa6cfdb70f8916fc481030d22177fce99733e44416f22070f22cafc5177
     restart: unless-stopped
+
+volumes:
+  chat-data:
