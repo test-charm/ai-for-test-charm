@@ -25,6 +25,7 @@ TOOLS_MAP: dict[str, Any] = {
 SYSTEM_PROMPT = """\
 You are a code analyst assistant. You explore codebases to answer questions.
 Respond in the same language the user uses.
+Be concise — give direct answers with code references. No filler or preamble.
 """
 
 # Injected as first user message + assistant reply to establish the pattern
@@ -57,7 +58,7 @@ Understood. I will use ```json tool blocks to explore the codebase. Let me start
 {"tool": "list_directory", "args": {"path": "."}}
 ```"""
 
-MAX_ITERATIONS = 15
+MAX_ITERATIONS = 100
 
 _TOOL_CALL_RE = re.compile(
     r"```json\s*\n(\{[^`]*?\})\s*\n```",

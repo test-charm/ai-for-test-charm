@@ -25,21 +25,8 @@ async def on_message(message: cl.Message):
     async for event_type, name, data in agent.astream_response(
         message.content, thread_id
     ):
-        if event_type == "tool_start":
-            step = cl.Step(name=name, type="tool")
-            step.input = data or ""
-            await step.send()
-            cl.user_session.set(f"step_{name}", step)
-
-        elif event_type == "tool_end":
-            step = cl.user_session.get(f"step_{name}")
-            if step:
-                step.output = data or ""
-                await step.update()
-
-        elif event_type == "token":
+        if event_type == "token":
             await msg.stream_token(name)
-
         elif event_type == "done":
             break
 
