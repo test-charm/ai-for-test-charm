@@ -61,9 +61,15 @@ Understood. I will use ```json tool blocks to explore the codebase. Let me start
 
 MAX_ITERATIONS = 100
 
+def _fix_json_escapes(s: str) -> str:
+    """Fix invalid JSON escape sequences (e.g. \\p, \\d) by double-escaping them."""
+    return re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', s)
+
+
 def _parse_tool_calls(text: str) -> list[dict]:
     """Extract tool call JSON objects from LLM output.
-    Handles: fenced ```json blocks, unclosed blocks, bare JSON lines."""
+    Handles: fenced ```json blocks, unclosed blocks, bare JSON lines,
+    and invalid escape sequences like \\p{Han}."""
     calls = []
     # Match JSON objects with one level of nesting (for "args": {...})
     for m in re.finditer(r'\{(?:[^{}]|\{[^{}]*\})*\}', text):
@@ -72,10 +78,13 @@ def _parse_tool_calls(text: str) -> list[dict]:
             continue
         try:
             obj = json.loads(raw)
-            if "tool" in obj:
-                calls.append(obj)
         except json.JSONDecodeError:
-            continue
+            try:
+                obj = json.loads(_fix_json_escapes(raw))
+            except json.JSONDecodeError:
+                continue
+        if "tool" in obj:
+            calls.append(obj)
     return calls
 
 
