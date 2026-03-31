@@ -1,10 +1,9 @@
 import json
 import logging
-import re
 import uuid
 from typing import Any, Callable, Awaitable
 
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 
@@ -13,82 +12,20 @@ from tools import list_directory, find_files, grep_code, read_file, get_symbols,
 
 logger = logging.getLogger(__name__)
 
-# Registry: name → callable
-TOOLS_MAP: dict[str, Any] = {
-    "list_directory": list_directory,
-    "find_files": find_files,
-    "grep_code": grep_code,
-    "read_file": read_file,
-    "get_symbols": get_symbols,
-    "get_repo_map": get_repo_map,
-}
+TOOLS = [list_directory, find_files, grep_code, read_file, get_symbols, get_repo_map]
+TOOLS_MAP: dict[str, Any] = {t.name: t for t in TOOLS}
 
 SYSTEM_PROMPT = """\
 You are a code analyst assistant. You explore codebases to answer questions.
+You MUST use the provided tools to explore the codebase before answering.
+NEVER answer from memory alone — always verify by reading actual code.
 Respond in the same language the user uses.
-Be concise — give direct answers with code references. No filler or preamble.
+Be concise — give direct answers with code references (file paths and line numbers).
 """
-
-# Injected as first user message + assistant reply to establish the pattern
-TOOL_INSTRUCTION = """\
-You have access to these tools to explore the codebase. \
-To use a tool, output a fenced JSON block exactly like this:
-
-```json
-{"tool": "list_directory", "args": {"path": "."}}
-```
-
-Available tools:
-- list_directory(path=".", max_depth=3) — View directory tree
-- find_files(pattern, path=".") — Find files by glob (e.g. "**/*.py")
-- grep_code(pattern, file_glob=None, path=".") — Regex search in code
-- read_file(file_path, start_line=1, end_line=None) — Read file lines
-- get_repo_map(path=".", file_glob=None) — Symbol map via tree-sitter
-- get_symbols(file_path) — Extract symbols from one file
-
-Rules:
-1. ALWAYS use tools via ```json blocks. NEVER just describe what you would do.
-2. When you have enough info, give your final answer as plain text (no json blocks).
-3. Cite file paths and line numbers.
-"""
-
-TOOL_INSTRUCTION_REPLY = """\
-Understood. I will use ```json tool blocks to explore the codebase. Let me start.
-
-```json
-{"tool": "list_directory", "args": {"path": "."}}
-```"""
 
 ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
 
-
 MAX_ITERATIONS = 100
-
-def _fix_json_escapes(s: str) -> str:
-    """Fix invalid JSON escape sequences (e.g. \\p, \\d) by double-escaping them."""
-    return re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', s)
-
-
-def _parse_tool_calls(text: str) -> list[dict]:
-    """Extract tool call JSON objects from LLM output.
-    Handles: fenced ```json blocks, unclosed blocks, bare JSON lines,
-    and invalid escape sequences like \\p{Han}."""
-    calls = []
-    # Match JSON objects with one level of nesting (for "args": {...})
-    for m in re.finditer(r'\{(?:[^{}]|\{[^{}]*\})*\}', text):
-        raw = m.group()
-        if '"tool"' not in raw:
-            continue
-        try:
-            obj = json.loads(raw)
-        except json.JSONDecodeError:
-            try:
-                obj = json.loads(_fix_json_escapes(raw))
-            except json.JSONDecodeError:
-                continue
-        if "tool" in obj:
-            calls.append(obj)
-    return calls
 
 
 def _execute_tool(name: str, args: dict) -> str:
@@ -117,24 +54,17 @@ def _create_llm():
 
 
 class CodeQAAgent:
-    """Text-based ReAct agent that works with ANY OpenAI-compatible API."""
+    """ReAct agent using native OpenAI tool calling."""
 
     def __init__(self):
         self.llm = _create_llm()
+        self.llm_with_tools = self.llm.bind_tools(TOOLS)
         self.conversations: dict[str, list] = {}
 
     def _get_messages(self, thread_id: str) -> list:
         if thread_id not in self.conversations:
-            # Few-shot: system prompt + injected user/assistant exchange
-            # to firmly establish the tool-calling JSON format
             self.conversations[thread_id] = [
                 SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=TOOL_INSTRUCTION),
-                AIMessage(content=TOOL_INSTRUCTION_REPLY),
-                HumanMessage(content="[Tool Results]\n\n### list_directory\n./\n├── src/\n│   ├── main.py\n│   └── utils.py\n└── README.md"),
-                AIMessage(content='The project has a simple structure. Let me look deeper.\n\n```json\n{"tool": "read_file", "args": {"file_path": "src/main.py"}}\n```'),
-                HumanMessage(content="[Tool Results]\n\n### read_file\n── src/main.py (1-10 of 10 lines) ──\n   1 │ print('hello')"),
-                AIMessage(content="This is a simple Python project with a `main.py` entry point that prints 'hello'. The `utils.py` likely contains helper functions."),
             ]
         return self.conversations[thread_id]
 
@@ -149,10 +79,9 @@ class CodeQAAgent:
         """
         messages = self._get_messages(thread_id)
 
-        # On first real question, pre-populate with actual project structure
-        if len(messages) == 7:  # exactly the few-shot messages
+        if len(messages) == 1:  # only system prompt — first question
             tree_result = _execute_tool("list_directory", {"path": ".", "max_depth": 2})
-            messages.append(HumanMessage(content=f"[New conversation] Here is the project structure:\n{tree_result}\n\nNow answer my question: {user_input}"))
+            messages.append(HumanMessage(content=f"Here is the project structure:\n{tree_result}\n\nNow answer my question: {user_input}"))
         else:
             messages.append(HumanMessage(content=user_input))
 
@@ -161,29 +90,21 @@ class CodeQAAgent:
             if progress_callback:
                 await progress_callback(iteration + 1, MAX_ITERATIONS, None)
 
-            full_response = ""
-            async for chunk in self.llm.astream(messages):
-                if hasattr(chunk, "content") and chunk.content:
-                    full_response += chunk.content
+            response = await self.llm_with_tools.ainvoke(messages)
+            logger.info(f"LLM response ({len(response.content)} chars content, {len(response.tool_calls)} tool calls)")
+            messages.append(response)
 
-            logger.info(f"LLM response ({len(full_response)} chars): {full_response[:500]}")
-            messages.append(AIMessage(content=full_response))
-
-            tool_calls = _parse_tool_calls(full_response)
-            logger.info(f"Parsed tool calls: {len(tool_calls)}")
-
-            if not tool_calls:
-                # No tool calls → this is the final answer, stream it
-                for token in full_response:
+            if not response.tool_calls:
+                for token in response.content:
                     yield ("token", token, None)
                 yield ("done", None, None)
                 return
 
-            # Execute tools and build observation
-            observations: list[str] = []
-            for tc in tool_calls:
-                tool_name = tc["tool"]
-                tool_args = tc.get("args", {})
+            for tc in response.tool_calls:
+                tool_name = tc["name"]
+                tool_args = tc["args"]
+                tool_call_id = tc["id"]
+
                 yield ("tool_start", tool_name, json.dumps(tool_args, ensure_ascii=False)[:500])
 
                 if progress_callback:
@@ -191,17 +112,12 @@ class CodeQAAgent:
 
                 result = _execute_tool(tool_name, tool_args)
                 truncated = result[:4000] if len(result) > 4000 else result
-                observations.append(f"### {tool_name}\n{truncated}")
+
+                messages.append(ToolMessage(content=truncated, tool_call_id=tool_call_id))
                 yield ("tool_end", tool_name, truncated[:2000])
 
-            # Feed observations back as a system-like message
-            obs_text = "\n\n".join(observations)
-            messages.append(HumanMessage(content=f"[Tool Results]\n\n{obs_text}"))
-
-        # Max iterations reached
         yield ("token", "\n\n⚠️ Reached maximum iterations. Partial results above.", None)
         yield ("done", None, None)
-
 
     async def ask(self, question: str, thread_id: str | None = None, progress_callback: ProgressCallback | None = None) -> str:
         """Run the full ReAct loop and return the final answer (non-streaming)."""
