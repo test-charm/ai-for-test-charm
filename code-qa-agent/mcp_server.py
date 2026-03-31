@@ -13,7 +13,7 @@ import argparse
 import logging
 import os
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 
 from agent import CodeQAAgent
 
@@ -53,11 +53,19 @@ def create_mcp_server(host: str = "0.0.0.0", port: int = 3001) -> FastMCP:
         "AST symbol extraction and other code navigation tools, then returns a "
         "concise answer with file paths and line number references.",
     )
-    async def ask_repo_question(question: str) -> str:
+    async def ask_repo_question(question: str, ctx: Context) -> str:
         """Run the agent and return the answer."""
         logger.info(f"MCP tool call: ask_repo_question({question!r})")
         agent = CodeQAAgent()
-        answer = await agent.ask(question)
+
+        async def on_progress(iteration: int, max_iter: int, tool_name: str | None = None):
+            msg = f"Iteration {iteration}/{max_iter}"
+            if tool_name:
+                msg += f" — calling {tool_name}"
+            await ctx.report_progress(progress=iteration, total=max_iter, message=msg)
+            await ctx.info(msg)
+
+        answer = await agent.ask(question, progress_callback=on_progress)
         logger.info(f"MCP tool answer ({len(answer)} chars)")
         return answer
 

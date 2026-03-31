@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import uuid
-from typing import Any
+from typing import Any, Callable, Awaitable
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
@@ -58,6 +58,9 @@ Understood. I will use ```json tool blocks to explore the codebase. Let me start
 ```json
 {"tool": "list_directory", "args": {"path": "."}}
 ```"""
+
+ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
+
 
 MAX_ITERATIONS = 100
 
@@ -135,7 +138,7 @@ class CodeQAAgent:
             ]
         return self.conversations[thread_id]
 
-    async def astream_response(self, user_input: str, thread_id: str):
+    async def astream_response(self, user_input: str, thread_id: str, progress_callback: ProgressCallback | None = None):
         """Run the ReAct loop, yielding events for the UI layer.
 
         Event types:
@@ -155,6 +158,8 @@ class CodeQAAgent:
 
         for iteration in range(MAX_ITERATIONS):
             logger.info(f"Agent iteration {iteration + 1}/{MAX_ITERATIONS}")
+            if progress_callback:
+                await progress_callback(iteration + 1, MAX_ITERATIONS, None)
 
             full_response = ""
             async for chunk in self.llm.astream(messages):
@@ -181,6 +186,9 @@ class CodeQAAgent:
                 tool_args = tc.get("args", {})
                 yield ("tool_start", tool_name, json.dumps(tool_args, ensure_ascii=False)[:500])
 
+                if progress_callback:
+                    await progress_callback(iteration + 1, MAX_ITERATIONS, tool_name)
+
                 result = _execute_tool(tool_name, tool_args)
                 truncated = result[:4000] if len(result) > 4000 else result
                 observations.append(f"### {tool_name}\n{truncated}")
@@ -195,12 +203,12 @@ class CodeQAAgent:
         yield ("done", None, None)
 
 
-    async def ask(self, question: str, thread_id: str | None = None) -> str:
+    async def ask(self, question: str, thread_id: str | None = None, progress_callback: ProgressCallback | None = None) -> str:
         """Run the full ReAct loop and return the final answer (non-streaming)."""
         if thread_id is None:
             thread_id = str(uuid.uuid4())
         answer = ""
-        async for event_type, token, _data in self.astream_response(question, thread_id):
+        async for event_type, token, _data in self.astream_response(question, thread_id, progress_callback):
             if event_type == "token":
                 answer += token
         return answer
