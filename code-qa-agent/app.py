@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 agent = create_agent()
 
 
+def _preview_text(text: str, limit: int = 200) -> str:
+    compact = " ".join(text.split())
+    if len(compact) <= limit:
+        return compact
+    return compact[:limit] + "..."
+
+
 @cl.data_layer
 def get_data_layer():
     return SQLAlchemyDataLayer(conninfo="sqlite+aiosqlite:///./data/chat_history.db")
@@ -42,6 +49,14 @@ async def on_chat_resume(thread):
 async def on_message(message: cl.Message):
     thread_id = cl.user_session.get("thread_id")
     start = time.monotonic()
+    tool_calls = 0
+
+    logger.info(
+        "Chat request thread=%s chars=%d preview=%r",
+        thread_id,
+        len(message.content),
+        _preview_text(message.content),
+    )
 
     msg = cl.Message(content="")
 
@@ -50,6 +65,8 @@ async def on_message(message: cl.Message):
     ):
         if event_type == "token":
             await msg.stream_token(name)
+        elif event_type == "tool_start":
+            tool_calls += 1
         elif event_type == "done":
             break
 
@@ -61,4 +78,10 @@ async def on_message(message: cl.Message):
         time_str = f"{seconds}秒"
     await msg.stream_token(f"\n\n---\n⏱️ 耗时 {time_str}")
 
+    logger.info(
+        "Chat response thread=%s elapsed=%.2fs tool_calls=%d",
+        thread_id,
+        elapsed,
+        tool_calls,
+    )
     await msg.send()
