@@ -43,7 +43,6 @@ def create_mcp_server(host: str = "0.0.0.0", port: int = 3001) -> FastMCP:
         host=host,
         port=port,
         stateless_http=True,
-        json_response=True,
     )
 
     @mcp.tool(
