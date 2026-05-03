@@ -1,6 +1,17 @@
 # Copilot Instructions
 
-## 构建与测试
+## 仓库结构
+
+本仓库是一个 monorepo，包含两个独立子项目：
+
+- **`dify/`** — Java Spring Boot CLI 应用，将 `.feature` 文件处理并上传到 Dify AI 知识库。
+- **`code-qa-agent/`** — Python LangGraph ReAct Agent，提供代码库智能问答服务（Chainlit UI + MCP Server）。
+
+---
+
+## dify/ — Java 项目
+
+### 构建与测试
 
 ```bash
 # 构建
@@ -24,7 +35,7 @@ TESTCHARM_DAL_DUMPINPUT=false ./gradlew cucumber -Pfile=src/test/resources/featu
 
 需要 Java 25 (adoptopenjdk-25.0.2+10.0.LTS) 。
 
-## 架构
+### 架构
 
 Spring Boot 命令行应用（`CommandLineRunner` + PicoCLI），**不是** Web 服务。处理流程：
 
@@ -73,21 +84,62 @@ CLI 选项：`--disable-upload`、`--upload-only`、`--verify`、`--retry-count`
   模板中配置）。
 - **测试以独立进程运行被测应用**：Cucumber 步骤通过 `java -jar` 启动一个新 JVM 进程来运行应用，而非在同一 JVM 内调用。
 
-## 开发过程
+---
 
-### 步骤
+## code-qa-agent/ — Python 项目
 
-每次代码更改都在以下三个阶段之一。按步骤进行。运行任何测试之后，请展示测试运行结果。
+### 构建与测试
 
-### 新增测试
+```bash
+cd code-qa-agent
 
-在此阶段的主要目标是根据用户需求，新增或修改测试代码，最终达到失败的测试信息足以判断代码行为**不符合**测试的要求。**这一步千万不要修改生产代码**，修改完测试之后可以直接运行测试，无需确认。
+# 安装依赖（需要 Python 3.12+，见 .tool-versions: python 3.13.12）
+pip install -r requirements.txt
 
-### 增加功能
+# 配置环境变量
+cp .env.example .env   # 填入 CQA_LLM_API_KEY 等
 
-在此阶段的主要目标是修改实现代码，使其通过新增的测试代码，并且通过所有现存测试，**请务必获取测试运行结果并确认其通过**。修改实现代码之后可以直接运行测试，并确认测试通过。**请务必只写最少的实现代来通过测试**
+# 运行 Chainlit 问答 UI
+export CQA_WORKSPACE_PATH=/path/to/codebase
+chainlit run app.py    # 浏览器访问 http://localhost:8000
 
-### 重构
+# 运行 MCP Server（stdio / SSE / streamable-http）
+python mcp_server.py
+python mcp_server.py --transport streamable-http --port 3001
 
-在此阶段的主要目标是修改实现代码，按照用户提示调整设计。或是自动review，去掉重复代码和其他代码臭味。在这个过程中不应该破坏现有测试，修改任何代码之后请运行测试，并确认测试通过。
-**重构完成后，请运行所有测试，不要只做构建**
+# Docker Compose 部署（同时启动 UI + MCP Server）
+WORKSPACE_PATH=/path/to/codebase docker compose up --build
+
+# 运行单元测试
+cd tests && python -m pytest test_agent.py -v
+# 或
+python -m unittest tests/test_agent.py
+```
+
+### 架构
+
+LangGraph ReAct Agent，通过 LangChain 工具（`list_directory`、`find_files`、`grep_code`、`read_file`、`get_symbols`、`get_repo_map`）主动探索代码库，再综合回答。
+
+```
+Chainlit UI ──→ CodeQAAgent.astream_response() ──→ LLM (OpenAI/Anthropic/Ollama)
+                         │                                   │
+                         └──── tool calls ──────────────────┘
+                                    │
+                              tools.py / repo_map.py
+                              (read-only filesystem access)
+
+MCP Server (mcp_server.py) ──→ CodeQAAgent.ask() [non-streaming]
+```
+
+双部署形态共享同一个 `CodeQAAgent` 类：
+- **Chainlit** (`app.py`)：流式 UI，按 `thread_id` 维护多轮对话历史，使用 SQLite 持久化聊天记录。
+- **MCP Server** (`mcp_server.py`)：无状态，每次调用创建新的 `CodeQAAgent` 实例，通过 `ask_repo_question` 工具暴露给其他 AI Agent。
+
+### 关键约定
+
+- **强制工具先行**：首轮对话使用 `tool_choice="required"/"any"`，确保 LLM 在回答前必须调用工具；调用工具后切换为 `tool_choice="auto"`。
+- **自动检测并重试"规划式"回复**：`_looks_like_incomplete_response()` 检测 LLM 返回"我来查一下..."类的规划文本，触发重试并注入约束提示。
+- **首轮注入目录树**：第一个问题自动调用 `list_directory` 并将结果注入 context，减少 LLM 盲目探索。
+- **路径安全**：`_safe_path()` 防止路径遍历（`../` 攻击），所有工具都受 `CQA_WORKSPACE_PATH` 约束。
+- **`get_repo_map`**：基于 tree-sitter AST 解析，生成全库符号索引（函数/类/方法签名），支持 20+ 语言，最多处理 200 个文件。
+- **配置前缀**：所有环境变量以 `CQA_` 为前缀（见 `config.py`），使用 pydantic-settings 加载。
