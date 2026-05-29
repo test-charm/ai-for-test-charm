@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from pathlib import Path
 from typing import Any, Callable, Awaitable
 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
@@ -14,16 +15,10 @@ logger = logging.getLogger(__name__)
 
 TOOLS = [list_directory, find_files, grep_code, read_file, get_symbols, get_repo_map]
 TOOLS_MAP: dict[str, Any] = {t.name: t for t in TOOLS}
-
-SYSTEM_PROMPT = """\
-You are a code analyst assistant. You explore codebases to answer questions.
-You MUST use the provided tools to explore the codebase before answering.
-NEVER answer from memory alone — always verify by reading actual code.
-Respond in the same language the user uses.
-Be concise — give direct answers with code references (file paths and line numbers).
-"""
+SYSTEM_PROMPT_PATH = Path(__file__).with_name("system_prompt.md")
 
 ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
+SystemPromptLoader = Callable[[], str]
 
 MAX_ITERATIONS = 100
 
@@ -98,6 +93,19 @@ def _response_stop_reason(response: AIMessage) -> str:
     return "unknown"
 
 
+def load_system_prompt(prompt_path: str | Path = SYSTEM_PROMPT_PATH) -> str:
+    path = Path(prompt_path)
+    try:
+        prompt = path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"System prompt file not found: {path}") from exc
+
+    if not prompt:
+        raise RuntimeError(f"System prompt file is empty: {path}")
+
+    return prompt
+
+
 def _execute_tool(name: str, args: dict) -> str:
     """Execute a tool by name and return its result."""
     fn = TOOLS_MAP.get(name)
@@ -126,10 +134,16 @@ def _create_llm():
 class CodeQAAgent:
     """ReAct agent using native OpenAI tool calling."""
 
-    def __init__(self, llm: Any | None = None, provider: str | None = None):
+    def __init__(
+        self,
+        llm: Any | None = None,
+        provider: str | None = None,
+        system_prompt_loader: SystemPromptLoader | None = None,
+    ):
         self.provider = provider or settings.llm_provider
         self.llm = llm or _create_llm()
         self.model = getattr(self.llm, "model_name", None) or getattr(self.llm, "model", None) or settings.llm_model
+        self.system_prompt_loader = system_prompt_loader or load_system_prompt
         self.llm_with_tools = self.llm.bind_tools(TOOLS)
         self.llm_with_required_tool = self.llm.bind_tools(
             TOOLS,
@@ -138,10 +152,15 @@ class CodeQAAgent:
         self.conversations: dict[str, list] = {}
 
     def _get_messages(self, thread_id: str) -> list:
+        system_prompt = self.system_prompt_loader()
         if thread_id not in self.conversations:
             self.conversations[thread_id] = [
-                SystemMessage(content=SYSTEM_PROMPT),
+                SystemMessage(content=system_prompt),
             ]
+        elif self.conversations[thread_id] and isinstance(self.conversations[thread_id][0], SystemMessage):
+            self.conversations[thread_id][0] = SystemMessage(content=system_prompt)
+        else:
+            self.conversations[thread_id].insert(0, SystemMessage(content=system_prompt))
         return self.conversations[thread_id]
 
     @staticmethod

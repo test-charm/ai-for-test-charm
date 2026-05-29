@@ -74,6 +74,8 @@ chainlit run app.py
 | `CQA_LLM_BASE_URL` | — | 自定义 API 端点 (Ollama/vLLM) |
 | `CQA_WORKSPACE_PATH` | `/workspace` | 目标代码库路径 |
 
+系统提示词不再写死在代码里，默认读取项目根目录下的 `system_prompt.md`。Chainlit UI 和 MCP Server 都会在**每次提问前**重新读取这个文件，因此后续只需要修改该 Markdown 文件即可调整问答约束。
+
 ### 使用 Ollama 本地模型
 
 ```env

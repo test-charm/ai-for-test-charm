@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -7,6 +8,7 @@ from agent import (
     _looks_like_incomplete_response,
     _required_tool_choice,
     _response_text,
+    load_system_prompt,
 )
 
 
@@ -128,6 +130,32 @@ class CodeQAAgentTest(unittest.IsolatedAsyncioTestCase):
 
 
 class AgentHelpersTest(unittest.TestCase):
+    def test_load_system_prompt_from_markdown_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            prompt_file = f"{temp_dir}/system_prompt.md"
+            with open(prompt_file, "w", encoding="utf-8") as handle:
+                handle.write("# Prompt\n\nFollow the repository conventions.\n")
+
+            self.assertEqual(
+                load_system_prompt(prompt_file),
+                "# Prompt\n\nFollow the repository conventions.",
+            )
+
+    def test_existing_thread_refreshes_system_prompt(self):
+        prompt_state = {"text": "Initial prompt"}
+        agent = CodeQAAgent(
+            llm=FakeLLM(),
+            provider="openai",
+            system_prompt_loader=lambda: prompt_state["text"],
+        )
+
+        messages = agent._get_messages("thread-4")
+        self.assertEqual(messages[0].content, "Initial prompt")
+
+        prompt_state["text"] = "Updated prompt"
+        refreshed_messages = agent._get_messages("thread-4")
+        self.assertEqual(refreshed_messages[0].content, "Updated prompt")
+
     def test_required_tool_choice_depends_on_provider(self):
         self.assertEqual(_required_tool_choice("openai"), "required")
         self.assertEqual(_required_tool_choice("anthropic"), "any")
