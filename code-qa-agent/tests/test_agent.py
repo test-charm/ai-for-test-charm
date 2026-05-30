@@ -141,6 +141,15 @@ class AgentHelpersTest(unittest.TestCase):
                 "# Prompt\n\nFollow the repository conventions.",
             )
 
+    def test_default_system_prompt_distinguishes_public_steps_and_inline_syntax(self):
+        prompt = load_system_prompt()
+
+        self.assertIn("要区分两类“公开能力”", prompt)
+        self.assertIn("公开 step 支持的 **内联语法 / doc-string 语法", prompt)
+        self.assertIn("可以同时成立，不能混为一谈", prompt)
+        self.assertIn("可以只截取其中公开的 step 片段作为示例", prompt)
+        self.assertIn("我引用的每个内联语法，是否都已在 `src/main/java` 找到解析逻辑？", prompt)
+
     def test_existing_thread_refreshes_system_prompt(self):
         prompt_state = {"text": "Initial prompt"}
         agent = CodeQAAgent(
