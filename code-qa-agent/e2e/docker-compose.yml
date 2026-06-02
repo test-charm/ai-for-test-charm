@@ -1,0 +1,82 @@
+name: code-qa-agent-e2e
+
+services:
+  mock-server:
+    image: mockserver/mockserver:5.15.0
+    ports:
+      - "11080:1080"
+    environment:
+      MOCKSERVER_LOG_LEVEL: INFO
+    restart: unless-stopped
+
+  code-qa-agent:
+    image: python:3.12-slim
+    working_dir: /app
+    command: ["/bin/sh", "/app/e2e/bootstrap-python.sh", "/bin/sh", "/app/e2e/run-chainlit-dev.sh"]
+    ports:
+      - "18000:8000"
+    volumes:
+      - ..:/app
+      - ${WORKSPACE_PATH:-..}:/workspace:ro
+      - code-qa-agent-venv:/opt/venv
+      - chat-data:/app/data
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+      CQA_LLM_PROVIDER: openai
+      CQA_LLM_MODEL: mock-gpt
+      CQA_LLM_API_KEY: mock-key
+      CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_WORKSPACE_PATH: /workspace
+      CQA_AUTH_PASSWORD: ""
+      CHAINLIT_AUTH_SECRET: 7a296ea4e13bd219a4bfe8cf771a2e79c312f84dab7989b8069dc5f6975fe647
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+    restart: unless-stopped
+
+  mcp-server:
+    image: python:3.12-slim
+    working_dir: /app
+    command: ["/bin/sh", "/app/e2e/bootstrap-python.sh", "/bin/sh", "/app/e2e/run-mcp-dev.sh"]
+    ports:
+      - "13001:3001"
+    volumes:
+      - ..:/app
+      - ${WORKSPACE_PATH:-..}:/workspace:ro
+      - ${WORKSPACE_PATH:-..}:/host/code-qa-agent:ro
+      - mcp-server-venv:/opt/venv
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+      CQA_LLM_PROVIDER: openai
+      CQA_LLM_MODEL: mock-gpt
+      CQA_LLM_API_KEY: mock-key
+      CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_WORKSPACE_PATH: /workspace
+      CQA_HOST_WORKSPACE_PATH: /host/code-qa-agent
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 3001), 5); s.close()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+    restart: unless-stopped
+
+volumes:
+  code-qa-agent-venv:
+  chat-data:
+  mcp-server-venv:
