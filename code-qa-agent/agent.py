@@ -20,7 +20,7 @@ SYSTEM_PROMPT_PATH = Path(__file__).with_name("system_prompt.md")
 ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
 SystemPromptLoader = Callable[[], str]
 
-MAX_ITERATIONS = 100
+MAX_ITERATIONS = 200
 
 
 def _required_tool_choice(provider: str) -> str:
