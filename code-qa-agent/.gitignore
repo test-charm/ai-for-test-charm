@@ -11,3 +11,6 @@ build/
 .DS_Store
 
 .tool-versions
+.playwright-mcp
+.gradle
+.idea

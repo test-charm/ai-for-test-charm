@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven {
+        url "https://mirrors.huaweicloud.com/repository/maven"
+    }
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+ext {
+    set('cucumberVersion', '7.30.0')
+    set('springBootVersion', '3.3.2')
+    set('testCharmVersion', '1.0.0-alpha.21')
+}
+
+configurations {
+    cucumberRuntime {
+        extendsFrom testImplementation
+        extendsFrom testRuntimeOnly
+    }
+}
+
+dependencies {
+    testAnnotationProcessor('org.projectlombok:lombok:1.18.32')
+    testImplementation('org.projectlombok:lombok:1.18.32')
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}")
+    testImplementation("io.cucumber:cucumber-java:${cucumberVersion}")
+    testImplementation("io.cucumber:cucumber-spring:${cucumberVersion}")
+
+    testImplementation("org.test-charm:jfactory:${testCharmVersion}")
+    testImplementation("org.test-charm:jfactory-cucumber:${testCharmVersion}")
+    testImplementation("org.test-charm:RESTful-cucumber:${testCharmVersion}")
+    testImplementation("org.test-charm:DAL-java:${testCharmVersion}")
+    testImplementation("org.test-charm:DAL-extension-basic:${testCharmVersion}")
+
+    testImplementation('org.mock-server:mockserver-client-java:5.15.0')
+    testImplementation('commons-fileupload:commons-fileupload:1.5')
+    testImplementation('org.apache.commons:commons-lang3:3.14.0')
+    testImplementation('org.postgresql:postgresql:42.7.4')
+}
+
+tasks.register('cucumber', JavaExec) {
+    dependsOn testClasses
+    mainClass = 'io.cucumber.core.cli.Main'
+    classpath = sourceSets.test.runtimeClasspath
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=utf-8', '-Dsun.net.client.defaultReadTimeout=10000', '--add-opens', 'java.base/sun.net.www.protocol.http=ALL-UNNAMED'
+    args = [
+        '--plugin', 'pretty',
+        '--glue', 'org.testcharm',
+        '--glue', 'com.github',
+        project.findProperty('file') ?: 'src/test/resources'
+    ]
+}
