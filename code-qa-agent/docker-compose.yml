@@ -1,16 +1,40 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: code_qa_agent
+      POSTGRES_USER: code_qa_agent
+      POSTGRES_PASSWORD: code_qa_agent
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U code_qa_agent -d code_qa_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   code-qa-agent:
     build: .
     ports:
       - "8000:8000"
     volumes:
       - ${WORKSPACE_PATH:-.}:/workspace:ro
-      - chat-data:/app/data
     env_file:
       - .env
     environment:
       - CQA_WORKSPACE_PATH=/workspace
+      - CQA_DB_HOST=postgres
+      - CQA_DB_PORT=5432
+      - CQA_DB_NAME=code_qa_agent
+      - CQA_DB_USER=code_qa_agent
+      - CQA_DB_PASSWORD=code_qa_agent
       - CHAINLIT_AUTH_SECRET=79178fa6cfdb70f8916fc481030d22177fce99733e44416f22070f22cafc5177
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   mcp-server:
@@ -24,8 +48,16 @@ services:
     environment:
       - CQA_WORKSPACE_PATH=/workspace
       - CQA_HOST_WORKSPACE_PATH=${WORKSPACE_PATH:-.}
+      - CQA_DB_HOST=postgres
+      - CQA_DB_PORT=5432
+      - CQA_DB_NAME=code_qa_agent
+      - CQA_DB_USER=code_qa_agent
+      - CQA_DB_PASSWORD=code_qa_agent
     command: python mcp_server.py --transport streamable-http --port 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  chat-data:
+  pgdata:

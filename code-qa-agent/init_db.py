@@ -1,8 +1,11 @@
-"""Create SQLite tables for Chainlit data persistence."""
+"""Create database tables for Chainlit data persistence (PostgreSQL via SQLAlchemy)."""
 
-import sqlite3
+import time
 import sys
-from pathlib import Path
+
+from sqlalchemy import create_engine, text
+
+from config import settings
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -26,11 +29,11 @@ CREATE TABLE IF NOT EXISTS steps (
     "id" TEXT PRIMARY KEY,
     "name" TEXT,
     "type" TEXT,
-    "threadId" TEXT,
+    "threadId" TEXT REFERENCES threads("id") ON DELETE CASCADE,
     "parentId" TEXT,
-    "streaming" BOOLEAN DEFAULT 0,
-    "waitForAnswer" BOOLEAN DEFAULT 0,
-    "isError" BOOLEAN DEFAULT 0,
+    "streaming" BOOLEAN DEFAULT FALSE,
+    "waitForAnswer" BOOLEAN DEFAULT FALSE,
+    "isError" BOOLEAN DEFAULT FALSE,
     "input" TEXT,
     "output" TEXT,
     "createdAt" TEXT,
@@ -41,14 +44,13 @@ CREATE TABLE IF NOT EXISTS steps (
     "tags" TEXT,
     "metadata" TEXT DEFAULT '{}',
     "generation" TEXT,
-    "defaultOpen" BOOLEAN DEFAULT 0,
-    "autoCollapse" BOOLEAN DEFAULT 0,
-    FOREIGN KEY ("threadId") REFERENCES threads("id") ON DELETE CASCADE
+    "defaultOpen" BOOLEAN DEFAULT FALSE,
+    "autoCollapse" BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS elements (
     "id" TEXT PRIMARY KEY,
-    "threadId" TEXT,
+    "threadId" TEXT REFERENCES threads("id") ON DELETE CASCADE,
     "type" TEXT,
     "url" TEXT,
     "chainlitKey" TEXT,
@@ -60,35 +62,48 @@ CREATE TABLE IF NOT EXISTS elements (
     "language" TEXT,
     "forId" TEXT,
     "mime" TEXT,
-    "props" TEXT DEFAULT '{}',
-    FOREIGN KEY ("threadId") REFERENCES threads("id") ON DELETE CASCADE
+    "props" TEXT DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS feedbacks (
     "id" TEXT PRIMARY KEY,
     "forId" TEXT NOT NULL,
-    "threadId" TEXT,
+    "threadId" TEXT REFERENCES threads("id") ON DELETE CASCADE,
     "value" INTEGER NOT NULL,
     "comment" TEXT,
-    "strategy" TEXT DEFAULT 'binary',
-    FOREIGN KEY ("threadId") REFERENCES threads("id") ON DELETE CASCADE
+    "strategy" TEXT DEFAULT 'binary'
 );
-
-CREATE INDEX IF NOT EXISTS idx_threads_user ON threads("userId");
-CREATE INDEX IF NOT EXISTS idx_steps_thread ON steps("threadId");
-CREATE INDEX IF NOT EXISTS idx_elements_thread ON elements("threadId");
-CREATE INDEX IF NOT EXISTS idx_feedbacks_thread ON feedbacks("threadId");
 """
 
+INDEXES = [
+    'CREATE INDEX IF NOT EXISTS idx_threads_user ON threads ("userId")',
+    'CREATE INDEX IF NOT EXISTS idx_steps_thread ON steps ("threadId")',
+    'CREATE INDEX IF NOT EXISTS idx_elements_thread ON elements ("threadId")',
+    'CREATE INDEX IF NOT EXISTS idx_feedbacks_thread ON feedbacks ("threadId")',
+]
 
-def init_db(db_path: str = "./data/chat_history.db"):
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.executescript(SCHEMA)
-    conn.close()
-    print(f"✅ Database initialized: {db_path}")
+
+def init_db(database_url: str | None = None, retries: int = 10, delay: float = 3.0):
+    url = database_url or settings.database_sync_url
+    for attempt in range(1, retries + 1):
+        try:
+            engine = create_engine(url)
+            with engine.connect() as conn:
+                conn.execute(text(SCHEMA))
+                for idx_sql in INDEXES:
+                    conn.execute(text(idx_sql))
+                conn.commit()
+            engine.dispose()
+            print(f"✅ Database initialized: {url.partition('@')[2] if '@' in url else url}")
+            return
+        except Exception as e:
+            print(f"⚠️  Database init attempt {attempt}/{retries} failed: {e}")
+            if attempt < retries:
+                time.sleep(delay)
+            else:
+                raise
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "./data/chat_history.db"
-    init_db(path)
+    url = sys.argv[1] if len(sys.argv) > 1 else None
+    init_db(url)

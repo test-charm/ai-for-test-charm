@@ -20,7 +20,7 @@ def _preview_text(text: str, limit: int = 200) -> str:
 
 @cl.data_layer
 def get_data_layer():
-    return SQLAlchemyDataLayer(conninfo="sqlite+aiosqlite:///./data/chat_history.db")
+    return SQLAlchemyDataLayer(conninfo=settings.database_url)
 
 
 @cl.password_auth_callback

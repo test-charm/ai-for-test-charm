@@ -9,6 +9,21 @@ services:
       MOCKSERVER_LOG_LEVEL: INFO
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: code_qa_agent
+      POSTGRES_USER: code_qa_agent
+      POSTGRES_PASSWORD: code_qa_agent
+    volumes:
+      - e2e-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U code_qa_agent -d code_qa_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   code-qa-agent:
     image: python:3.12-slim
     working_dir: /app
@@ -19,7 +34,6 @@ services:
       - ..:/app
       - ${WORKSPACE_PATH:-..}:/workspace:ro
       - code-qa-agent-venv:/opt/venv
-      - chat-data:/app/data
     environment:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
@@ -30,7 +44,15 @@ services:
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
       CQA_AUTH_PASSWORD: ""
+      CQA_DB_HOST: postgres
+      CQA_DB_PORT: 5432
+      CQA_DB_NAME: code_qa_agent
+      CQA_DB_USER: code_qa_agent
+      CQA_DB_PASSWORD: code_qa_agent
       CHAINLIT_AUTH_SECRET: 7a296ea4e13bd219a4bfe8cf771a2e79c312f84dab7989b8069dc5f6975fe647
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -64,6 +86,14 @@ services:
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
       CQA_HOST_WORKSPACE_PATH: /host/code-qa-agent
+      CQA_DB_HOST: postgres
+      CQA_DB_PORT: 5432
+      CQA_DB_NAME: code_qa_agent
+      CQA_DB_USER: code_qa_agent
+      CQA_DB_PASSWORD: code_qa_agent
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -78,5 +108,5 @@ services:
 
 volumes:
   code-qa-agent-venv:
-  chat-data:
+  e2e-pgdata:
   mcp-server-venv:
