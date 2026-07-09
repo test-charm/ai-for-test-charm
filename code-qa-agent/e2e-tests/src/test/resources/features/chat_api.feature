@@ -2,9 +2,12 @@
 功能: Chainlit 聊天 HTTP 接口
 
   场景: 用户名为空登录失败
-    当POST "/login":
-      """ application/x-www-form-urlencoded
-      username=%20&password=anything
+    当POST form "/login":
+      """
+      {
+        username: ' '
+        password: anything
+      }
       """
     那么response should be:
       """

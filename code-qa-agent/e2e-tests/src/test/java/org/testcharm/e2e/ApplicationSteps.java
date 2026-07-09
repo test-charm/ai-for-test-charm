@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
+import org.testcharm.jfactory.JFactory;
 
 import java.net.CookieHandler;
 import java.net.CookieManager;
@@ -45,12 +46,16 @@ public class ApplicationSteps {
     @Value("${app.db.password}")
     private String dbPassword;
 
+    @Autowired
+    private JFactory jFactory;
+
     private final Map<String, String> cookies = new LinkedHashMap<>();
 
     @Before(order = 0)
     public void resetScenarioState() {
         CookieHandler.setDefault(new CookieManager());
         restfulStep.setBaseUrl(baseUrl);
+        restfulStep.setJFactory(jFactory);
         cookies.clear();
         PathVariableReplacement.reset();
         PathVariableReplacement.replacements.put("session-id", UUID.randomUUID().toString());
@@ -60,7 +65,12 @@ public class ApplicationSteps {
 
     @Before("@api-login")
     public void apiLogin() {
-        restfulStep.post("/login", "application/x-www-form-urlencoded", "username=joseph&password=anything");
+        restfulStep.postForm("/login", """
+                {
+                    username: joseph
+                    password: anything
+                }
+                """);
         captureResponseState();
     }
 
