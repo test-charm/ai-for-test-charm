@@ -23,8 +23,18 @@ SystemPromptLoader = Callable[[], str]
 MAX_ITERATIONS = 200
 
 
-def _required_tool_choice(provider: str) -> str:
-    return "any" if provider == "anthropic" else "required"
+def _required_tool_choice(provider: str, model: str = "") -> str:
+    """Return the tool_choice value for the first ReAct iteration.
+
+    Anthropic uses "any". Most OpenAI-compatible providers support "required",
+    but some (e.g. opencode zen proxying DeepSeek) reject it with a 400.
+    Fall back to "auto" for models known not to support "required".
+    """
+    if provider == "anthropic":
+        return "any"
+    if "deepseek" in model.lower():
+        return "auto"
+    return "required"
 
 
 def _preview_text(text: str, limit: int = 200) -> str:
@@ -147,7 +157,7 @@ class CodeQAAgent:
         self.llm_with_tools = self.llm.bind_tools(TOOLS)
         self.llm_with_required_tool = self.llm.bind_tools(
             TOOLS,
-            tool_choice=_required_tool_choice(self.provider),
+            tool_choice=_required_tool_choice(self.provider, self.model),
         )
         self.conversations: dict[str, list] = {}
 
@@ -198,7 +208,7 @@ class CodeQAAgent:
 
         for iteration in range(MAX_ITERATIONS):
             has_tool_results = self._has_tool_results(messages)
-            phase = "auto" if has_tool_results else _required_tool_choice(self.provider)
+            phase = "auto" if has_tool_results else _required_tool_choice(self.provider, self.model)
             logger.info(
                 "Agent iteration %d/%d thread=%s mode=%s messages=%d has_tool_results=%s",
                 iteration + 1,
