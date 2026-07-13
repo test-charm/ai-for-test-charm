@@ -112,7 +112,11 @@ public class ApplicationSteps {
 
     @SuppressWarnings("unchecked")
     private void captureCookies(RestfulStep.Response response) {
-        Object setCookie = response.getHeaders().get("Set-Cookie");
+        Map<String, Object> headers = response.getHeaders();
+        Object setCookie = headers.get("Set-Cookie");
+        if (setCookie == null) {
+            setCookie = headers.get("set-cookie");
+        }
         if (setCookie == null) {
             return;
         }
@@ -142,6 +146,10 @@ public class ApplicationSteps {
                     .map(entry -> entry.getKey() + "=" + entry.getValue())
                     .collect(Collectors.joining("; ")));
         }
+    }
+
+    Map<String, String> getCookies() {
+        return cookies;
     }
 
     private void captureDynamicVariables(RestfulStep.Response response) {

@@ -1,12 +1,12 @@
 app:
-  base-url: http://host.docker.internal:18000
+  base-url: http://localhost:18000
   db:
-    url: jdbc:postgresql://host.docker.internal:5432/code_qa_agent
+    url: jdbc:postgresql://localhost:5432/code_qa_agent
     username: code_qa_agent
     password: code_qa_agent
 
 mock-server:
-  endpoint: http://host.docker.internal:11080
+  endpoint: http://mock-server.tool.net:11080
 
 testcharm:
   dal:

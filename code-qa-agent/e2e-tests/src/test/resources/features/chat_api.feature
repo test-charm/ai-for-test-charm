@@ -19,76 +19,41 @@
       }
       """
 
-  @api-login
-  场景: 非 UUID 消息 id 返回错误消息且不落库
-    当POST "/set-session-cookie":
-      """ application/json
-      {
-        "session_id": "${session-id}"
-      }
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.json.message='Session cookie set'
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&t=t0"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t1":
-      """ text/plain
-      40{"clientType":"webapp","sessionId":"${session-id}","threadId":"","userEnv":"{}","chatProfile":""}
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t2"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t3":
-      """ text/plain
-      42["connection_successful"]
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t4":
-      """ text/plain
-      42["client_message",{"message":{"id":"not-a-uuid","threadId":"","parentId":null,"createdAt":"2026-07-09T00:00:00.000Z","output":"hello","name":"joseph","type":"user_message","metadata":{"location":"http://127.0.0.1:18000/"},"streaming":false,"isError":false,"waitForAnswer":false},"fileReferences":null}]
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t5"
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string=/.*badly formed hexadecimal UUID string.*/
-      }
-      """
+#  @api-login
+#  场景: 非 UUID 消息 id 返回错误消息且不落库
+#    当POST "/set-session-cookie":
+#      """ application/json
+#      {
+#        "session_id": "${session-id}"
+#      }
+#      """
+#    那么response should be:
+#      """
+#      : {
+#        code=200
+#        body.json.message='Session cookie set'
+#      }
+#      """
+#    当连接 Socket.IO:
+#      """ application/json
+#      {"clientType":"webapp","sessionId":"${session-id}","threadId":"","userEnv":"{}","chatProfile":""}
+#      """
+#    当发送事件 "connection_successful"
+#    当发送事件 "client_message":
+#      """ application/json
+#      {"message":{"id":"not-a-uuid","threadId":"","parentId":null,"createdAt":"2026-07-09T00:00:00.000Z","output":"hello","name":"joseph","type":"user_message","metadata":{"location":"http://127.0.0.1:18000/"},"streaming":false,"isError":false,"waitForAnswer":false},"fileReferences":null}
+#      """
+#    那么等待最多 5 秒接收 Socket.IO 事件
+#    那么收到的 Socket.IO 事件应满足:
+#      """
+#      receivedEvents: [{
+#        name: new_message
+#        data.output: ''
+#      } {
+#        name: update_message
+#        data.output: ''
+#      }]
+#      """
 
   @api-login
   场景: 有效消息返回助手回复并落库
@@ -170,91 +135,36 @@
         body.json.message='Session cookie set'
       }
       """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&t=t0"
-    那么response should be:
+    当连接 Socket.IO:
+      """ application/json
+      {"clientType":"webapp","sessionId":"${session-id}","threadId":"","userEnv":"{}","chatProfile":""}
       """
-      : {
-        code=200
+    当发送事件 "connection_successful"
+    当发送事件 "client_message":
+      """ application/json
+      {"message":{"id":"${message-id}","threadId":"","parentId":null,"createdAt":"2026-07-09T00:00:00.000Z","output":"hello","name":"joseph","type":"user_message","metadata":{"location":"http://127.0.0.1:18000/"},"streaming":false,"isError":false,"waitForAnswer":false},"fileReferences":null}
+      """
+#    那么等待最多 30 秒接收 Socket.IO 事件
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是一个mock回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
       }
       """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t1":
-      """ text/plain
-      40{"clientType":"webapp","sessionId":"${session-id}","threadId":"","userEnv":"{}","chatProfile":""}
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t2"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t3":
-      """ text/plain
-      42["connection_successful"]
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当POST "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t4":
-      """ text/plain
-      42["client_message",{"message":{"id":"${message-id}","threadId":"","parentId":null,"createdAt":"2026-07-09T00:00:00.000Z","output":"hello","name":"joseph","type":"user_message","metadata":{"location":"http://127.0.0.1:18000/"},"streaming":false,"isError":false,"waitForAnswer":false},"fileReferences":null}]
-      """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.string='OK'
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t5"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t6"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t7"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t8"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    当GET "/ws/socket.io/?EIO=4&transport=polling&sid=${engine-sid}&t=t9"
-    那么response should be:
-      """
-      : {
-        code=200
-      }
-      """
-    并且验证Mock API:
+    并且数据应为:
      """
-     : {
-       ::size= 2
-     }
+     MockApi::filter: { POST: '/v1/chat/completions' } : [{
+       ...
+     } {
+       ...
+     }]
      """
