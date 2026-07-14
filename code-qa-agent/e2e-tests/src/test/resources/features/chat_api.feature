@@ -417,36 +417,84 @@
            content: ```
                     Here is the project structure:
                     ./
-                    ├── data/
-                    ├── e2e-tests/
-                    │   ├── gradle/
-                    │   ├── mockserver/
+                    ├── bean-util/
                     │   ├── src/
-                    │   ├── bootstrap-python.sh
+                    │   └── build.gradle
+                    ├── cucumber-swarm/
+                    │   ├── src/
                     │   ├── build.gradle
-                    │   ├── docker-compose.yml
-                    │   ├── gradlew
-                    │   ├── gradlew.bat
-                    │   ├── run-chainlit-dev.sh
-                    │   ├── run-mcp-dev.sh
-                    │   └── settings.gradle
-                    ├── tests/
-                    │   ├── __init__.py
-                    │   └── test_agent.py
-                    ├── agent.py
-                    ├── app.py
-                    ├── chainlit.md
-                    ├── config.py
+                    │   └── README.md
+                    ├── DAL-extension-basic/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── DAL-extension-inspector/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── DAL-extension-jdbc/
+                    │   ├── src/
+                    │   ├── build.gradle
+                    │   └── README.md
+                    ├── DAL-extension-jfactory/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── DAL-java/
+                    │   ├── src/
+                    │   ├── build.gradle
+                    │   └── README.md
+                    ├── feature-summary/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── gradle/
+                    │   ├── wrapper/
+                    │   ├── jacoco.gradle
+                    │   ├── libs.versions.toml
+                    │   ├── publish.gradle
+                    │   └── test.gradle
+                    ├── interpreter-core/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── java-compiler-util/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── jfactory/
+                    │   ├── src/
+                    │   ├── build.gradle
+                    │   └── README.md
+                    ├── jfactory-cucumber/
+                    │   ├── doc/
+                    │   ├── src/
+                    │   ├── build.gradle
+                    │   └── README.md
+                    ├── jfactory-DAL/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── jfactory-repo-jpa/
+                    │   ├── src/
+                    │   ├── build.gradle
+                    │   └── README.md
+                    ├── page-flow/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── page-flow-playwright/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── page-flow-selenium/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── RESTful-cucumber/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── view-mapper/
+                    │   ├── src/
+                    │   └── build.gradle
+                    ├── build.gradle
                     ├── docker-compose.yml
-                    ├── Dockerfile
-                    ├── init_db.py
-                    ├── mcp_server.py
-                    ├── migrate_sqlite_to_pg.py
+                    ├── gradle.properties
+                    ├── gradlew
+                    ├── gradlew.bat
+                    ├── LICENSE
                     ├── README.md
-                    ├── repo_map.py
-                    ├── requirements.txt
-                    ├── system_prompt.md
-                    └── tools.py
+                    └── settings.gradle
 
                     Now answer my question: hello
                     ```
@@ -475,23 +523,34 @@
          } {
             content: ```
                      ./
-                     ├── data/
-                     ├── e2e-tests/
-                     ├── tests/
-                     ├── agent.py
-                     ├── app.py
-                     ├── chainlit.md
-                     ├── config.py
+                     ├── bean-util/
+                     ├── cucumber-swarm/
+                     ├── DAL-extension-basic/
+                     ├── DAL-extension-inspector/
+                     ├── DAL-extension-jdbc/
+                     ├── DAL-extension-jfactory/
+                     ├── DAL-java/
+                     ├── feature-summary/
+                     ├── gradle/
+                     ├── interpreter-core/
+                     ├── java-compiler-util/
+                     ├── jfactory/
+                     ├── jfactory-cucumber/
+                     ├── jfactory-DAL/
+                     ├── jfactory-repo-jpa/
+                     ├── page-flow/
+                     ├── page-flow-playwright/
+                     ├── page-flow-selenium/
+                     ├── RESTful-cucumber/
+                     ├── view-mapper/
+                     ├── build.gradle
                      ├── docker-compose.yml
-                     ├── Dockerfile
-                     ├── init_db.py
-                     ├── mcp_server.py
-                     ├── migrate_sqlite_to_pg.py
+                     ├── gradle.properties
+                     ├── gradlew
+                     ├── gradlew.bat
+                     ├── LICENSE
                      ├── README.md
-                     ├── repo_map.py
-                     ├── requirements.txt
-                     ├── system_prompt.md
-                     └── tools.py
+                     └── settings.gradle
                      ```
             role: tool
             tool_calls: null
