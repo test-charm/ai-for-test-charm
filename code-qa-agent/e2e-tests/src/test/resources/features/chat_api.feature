@@ -173,6 +173,9 @@
     并且数据应为:
      """
      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+       headers: {
+         Authorization: 'Bearer mock-key'
+       }
        body.json= {
          stream: false
          model: mock-gpt
@@ -455,12 +458,45 @@
          stream: false
          model: mock-gpt
          tool_choice: null
-         tools= {
-           empty: false
-         }
-         messages= {
-           empty: false
-         }
+         tools::size: 6
+         messages= [... {
+           content: null
+           role: assistant
+           tool_calls= [{
+             function= {
+               arguments: ```
+                          {"path": ".", "max_depth": 1}
+                          ```
+               name: list_directory
+             }
+             id: call_1
+             type: function
+           }]
+         } {
+            content: ```
+                     ./
+                     ├── data/
+                     ├── e2e-tests/
+                     ├── tests/
+                     ├── agent.py
+                     ├── app.py
+                     ├── chainlit.md
+                     ├── config.py
+                     ├── docker-compose.yml
+                     ├── Dockerfile
+                     ├── init_db.py
+                     ├── mcp_server.py
+                     ├── migrate_sqlite_to_pg.py
+                     ├── README.md
+                     ├── repo_map.py
+                     ├── requirements.txt
+                     ├── system_prompt.md
+                     └── tools.py
+                     ```
+            role: tool
+            tool_calls: null
+            tool_call_id: call_1
+         }]
        }
      }]
      """
