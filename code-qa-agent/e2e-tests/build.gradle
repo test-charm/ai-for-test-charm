@@ -47,7 +47,6 @@ dependencies {
     testImplementation('org.apache.commons:commons-lang3:3.14.0')
     testImplementation('org.postgresql:postgresql:42.7.4')
 
-    testImplementation('com.squareup.okhttp3:okhttp:4.9.3')
     testImplementation('org.json:json:20230227')
 }
 

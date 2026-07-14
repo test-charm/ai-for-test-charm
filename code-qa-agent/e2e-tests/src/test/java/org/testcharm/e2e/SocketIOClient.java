@@ -1,15 +1,15 @@
 package org.testcharm.e2e;
 
 import lombok.Getter;
-import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.testcharm.cucumber.restful.RestfulStep;
+import org.testcharm.jfactory.JFactory;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Minimal Socket.IO client using HTTP long-polling transport.
@@ -20,36 +20,28 @@ public class SocketIOClient {
     @Getter
     private final List<Map<String, Object>> receivedEvents = new CopyOnWriteArrayList<>();
     private final CountDownLatch connectedLatch = new CountDownLatch(1);
+    private final RestfulStep restfulStep = new RestfulStep();
     private volatile boolean connected;
     private volatile boolean running;
     private String engineSid;
-    private String baseHttpUrl;
     private Map<String, List<String>> extraHeaders;
     private int pollSeq;
     private volatile Thread pollThread;
-    private final OkHttpClient httpClient = new OkHttpClient.Builder()
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build();
+    private String wsBasePath;
 
     public void connect(String baseUrl, Map<String, String> auth, Map<String, List<String>> extraHeaders) throws Exception {
-        this.baseHttpUrl = baseUrl + "/ws/socket.io/?EIO=4&transport=polling";
+        restfulStep.setBaseUrl(baseUrl);
+        restfulStep.setJFactory(new JFactory());
+        wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
 
-        // Login and capture session cookie if not provided
         Map<String, List<String>> headers = new LinkedHashMap<>();
         if (extraHeaders != null) {
             headers.putAll(extraHeaders);
         }
-        // If no cookie provided, login to get one
-        if (!headers.containsKey("Cookie") && !headers.containsKey("cookie")) {
-            String cookieValue = loginAndGetCookie(baseUrl);
-            if (cookieValue != null && !cookieValue.isEmpty()) {
-                headers.put("Cookie", List.of(cookieValue));
-            }
-        }
         this.extraHeaders = headers;
 
         // Step 1: Engine.IO handshake
-        String handshakeResp = httpGet(baseHttpUrl);
+        String handshakeResp = httpGet(wsBasePath);
         if (handshakeResp == null || handshakeResp.isEmpty()) {
             throw new RuntimeException("Empty handshake response");
         }
@@ -64,10 +56,9 @@ public class SocketIOClient {
         }
 
         // Step 2: Send CONNECT packet
-        String connectUrl = baseHttpUrl + "&sid=" + engineSid;
         JSONObject authJson = new JSONObject(auth);
         String connectBody = "40" + authJson;
-        String connectResp = httpPost(connectUrl, connectBody);
+        String connectResp = httpPost(wsBasePath + "&sid=" + engineSid, connectBody);
         if (!"OK".equals(connectResp)) {
             throw new RuntimeException("CONNECT failed: " + connectResp);
         }
@@ -85,8 +76,7 @@ public class SocketIOClient {
     private void pollLoop() {
         while (running) {
             try {
-                String pollUrl = baseHttpUrl + "&sid=" + engineSid + "&t=" + (pollSeq++);
-                String resp = httpGet(pollUrl);
+                String resp = httpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
                 if (resp != null && resp.length() > 1) {
                     processMessages(resp);
                 }
@@ -99,55 +89,23 @@ public class SocketIOClient {
         }
     }
 
-    private String loginAndGetCookie(String baseUrl) throws IOException {
-        String loginUrl = baseUrl + "/login";
-        Request request = new Request.Builder()
-                .url(loginUrl)
-                .post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded"), "username=joseph&password=joseph"))
-                .build();
-        try (Response response = httpClient.newCall(request).execute()) {
-            List<String> cookies = response.headers("Set-Cookie");
-            if (cookies.isEmpty()) {
-                cookies = response.headers("set-cookie");
-            }
-            for (String cookie : cookies) {
-                String[] parts = cookie.split(";", 2);
-                if (parts[0].startsWith("access_token=")) {
-                    return parts[0];
-                }
-            }
-        }
-        return null;
+    private String httpGet(String path) {
+        restfulStep.get(path);
+        addHeaders(restfulStep);
+        return restfulStep.response("body.string");
     }
 
-    private String httpGet(String url) throws IOException {
-        Request.Builder builder = new Request.Builder().url(url).get();
-        addHeaders(builder);
-        try (Response response = httpClient.newCall(builder.build()).execute()) {
-            if (response.body() != null) {
-                return response.body().string();
-            }
-        }
-        return null;
+    private String httpPost(String path, String body) throws IOException {
+        restfulStep.post(path, "text/plain", body);
+        addHeaders(restfulStep);
+        return restfulStep.response("body.string");
     }
 
-    private String httpPost(String url, String body) throws IOException {
-        Request.Builder builder = new Request.Builder().url(url)
-                .post(RequestBody.create(MediaType.parse("text/plain"), body));
-        addHeaders(builder);
-        try (Response response = httpClient.newCall(builder.build()).execute()) {
-            if (response.body() != null) {
-                return response.body().string();
-            }
-        }
-        return null;
-    }
-
-    private void addHeaders(Request.Builder builder) {
+    private void addHeaders(RestfulStep restfulStep) {
         if (extraHeaders != null) {
             for (Map.Entry<String, List<String>> entry : extraHeaders.entrySet()) {
                 for (String value : entry.getValue()) {
-                    builder.addHeader(entry.getKey(), value);
+                    restfulStep.header(entry.getKey(), value);
                 }
             }
         }
@@ -184,7 +142,7 @@ public class SocketIOClient {
                 handleSocketMessage(socketType, payload);
             } else if (engineType == '2') {
                 try {
-                    httpPost(baseHttpUrl + "&sid=" + engineSid, "3");
+                    httpPost(wsBasePath + "&sid=" + engineSid, "3");
                 } catch (IOException ignored) {}
             }
         }
@@ -249,30 +207,11 @@ public class SocketIOClient {
             }
         }
         try {
-            String postUrl = baseHttpUrl + "&sid=" + engineSid;
-            httpPost(postUrl, "42" + arr);
+            httpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
         } catch (IOException e) {
             throw new RuntimeException("Failed to emit event: " + event, e);
         }
     }
-
-    public void waitForEvents(int timeoutSeconds) throws InterruptedException {
-        Thread.sleep(timeoutSeconds * 1000L);
-    }
-
-//    public List<Map<String, Object>> drainEvents() {
-//        running = false;
-//        if (pollThread != null) {
-//            pollThread.interrupt();
-//        }
-//        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
-//        List<Map<String, Object>> events = new ArrayList<>();
-//        Map<String, Object> event;
-//        while ((event = receivedEvents.poll()) != null) {
-//            events.add(event);
-//        }
-//        return events;
-//    }
 
     public void clear() {
         running = false;
