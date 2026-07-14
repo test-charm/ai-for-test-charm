@@ -83,32 +83,14 @@ public class SocketIOSteps {
         client.emit(eventName, data);
     }
 
-    @那么("等待最多 {int} 秒接收 Socket.IO 事件")
-    public void waitForEvents(int seconds) throws InterruptedException {
-        client.waitForEvents(seconds);
-    }
-
     @那么("收到的 Socket.IO 事件应满足:")
     public void verifyEvents(String dalExpression) {
-//        List<Map<String, Object>> events = client.drainEvents();
         for (Map<String, Object> event : client.getReceivedEvents()) {
             Object data = event.get("data");
             if (data != null) {
                 extractThreadId(data.toString());
             }
         }
-//        if (events.isEmpty()) {
-//            throw new AssertionError("Expected Socket.IO events but received none");
-//        }
-//        try {
-//            Assertions.expect(events).should(dalExpression);
-//        } catch (AssertionError e) {
-//            if (e.getMessage() != null && e.getMessage().contains("Expect a verification operator")) {
-//                // DAL doesn't support the operator, but events are non-empty - that's sufficient
-//                return;
-//            }
-//            throw e;
-//        }
         expect(client).should(dalExpression);
     }
 
