@@ -9,6 +9,25 @@ Usage:
     python mcp_server.py --transport streamable-http  # Streamable HTTP on port 3001
 """
 
+# --- coverage bootstrap (driven by COVERAGE_DATA_FILE env var) ---
+import os as _os
+_coverage_data_file = _os.environ.get("COVERAGE_DATA_FILE", "")
+if _coverage_data_file:
+    import atexit as _atexit, signal as _signal, sys as _sys
+    import coverage as _coverage
+    _rcfile = _os.environ.get("COVERAGE_RCFILE", ".coveragerc")
+    _cov = _coverage.Coverage(data_file=_coverage_data_file, config_file=_rcfile, branch=True)
+    _cov.start()
+    def _save_coverage():
+        _cov.stop()
+        _cov.save()
+    _atexit.register(_save_coverage)
+    for _sig in (_signal.SIGTERM, _signal.SIGINT):
+        _signal.signal(_sig, lambda signum, frame, s=_sig: (
+            _save_coverage(), _signal.signal(s, _signal.SIG_DFL), _os.kill(_os.getpid(), s)
+        ))
+# --- end coverage bootstrap ---
+
 import argparse
 import logging
 import os
@@ -66,6 +85,14 @@ def create_mcp_server(host: str = "0.0.0.0", port: int = 3001) -> FastMCP:
 
         answer = await agent.ask(question, progress_callback=on_progress)
         logger.info(f"MCP tool answer ({len(answer)} chars)")
+
+        # Save coverage data after each request
+        if _coverage_data_file:
+            try:
+                _save_coverage()
+            except Exception:
+                pass
+
         return answer
 
     return mcp

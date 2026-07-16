@@ -143,3 +143,54 @@ MCP Server (mcp_server.py) ──→ CodeQAAgent.ask() [non-streaming]
 - **路径安全**：`_safe_path()` 防止路径遍历（`../` 攻击），所有工具都受 `CQA_WORKSPACE_PATH` 约束。
 - **`get_repo_map`**：基于 tree-sitter AST 解析，生成全库符号索引（函数/类/方法签名），支持 20+ 语言，最多处理 200 个文件。
 - **配置前缀**：所有环境变量以 `CQA_` 为前缀（见 `config.py`），使用 pydantic-settings 加载。
+
+### e2e 测试与代码覆盖率
+
+e2e 测试位于 `e2e-tests/`，是 Java Cucumber 项目，通过 HTTP/WebSocket 请求测试运行在 Docker 中的 Python 应用。
+
+#### 运行 e2e 测试
+
+```bash
+cd e2e-tests
+docker compose up -d          # 启动所有服务（含 mock-server、postgres）
+./gradlew cucumber             # 运行测试
+```
+
+#### 收集覆盖率
+
+`app.py` 和 `mcp_server.py` 顶部有覆盖率引导代码，由 `COVERAGE_DATA_FILE` 环境变量控制。Docker Compose 启动时通过 `run-*-dev.sh` 脚本自动设置该变量，每次请求结束后自动保存 `.coverage-*` 数据文件到 `coverage-output/` 目录。
+
+```bash
+cd e2e-tests
+./gradlew cucumber             # 先运行测试
+./collect-coverage.sh          # 合并数据 + 输出报告
+open coverage-output/html/index.html
+```
+
+#### 覆盖率机制
+
+```
+docker-compose.yml
+  ├── init: true               # tini 作为 PID 1，正确转发 SIGTERM
+  ├── COVERAGE_DATA_FILE env   # 通过 run-*-dev.sh 注入
+  └── coverage-output/ volume  # 宿主机挂载，接收 .coverage-* 文件
+
+app.py / mcp_server.py
+  └── 顶部 coverage bootstrap  # 进程启动时自动启用 coverage
+      ├── COVERAGE_DATA_FILE 非空时 import coverage + cov.start()
+      ├── atexit 注册 save     # 正常退出时保存
+      ├── SIGTERM/SIGINT 处理  # 信号终止时保存
+      └── on_message 末尾 save # 每次请求后保存（保障实时写入）
+```
+
+#### 关键文件
+
+| 文件 | 作用 |
+|------|------|
+| `.coveragerc` | coverage.py 配置（branch=True, source=/app, omit 排除项） |
+| `e2e-tests/run-chainlit-dev.sh` | 注入 `COVERAGE_DATA_FILE` 环境变量 |
+| `e2e-tests/run-mcp-dev.sh` | 同上 |
+| `e2e-tests/docker-compose.yml` | `init: true` + volume 挂载 |
+| `e2e-tests/collect-coverage.sh` | 合并 `.coverage-*` 文件并生成 HTML 报告 |
+| `app.py` + `mcp_server.py` | 顶部 coverage bootstrap + 请求末尾 save |
+| `requirements.txt` | 含 `coverage>=7.0.0` |

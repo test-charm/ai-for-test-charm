@@ -28,6 +28,7 @@ services:
 
   code-qa-agent:
     image: python:3.12-slim
+    init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
     ports:
@@ -36,6 +37,7 @@ services:
       - ..:/app
       - ${WORKSPACE_PATH:-..}:/workspace:ro
       - code-qa-agent-venv:/opt/venv
+      - ./coverage-output:/app/coverage
     environment:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
@@ -69,6 +71,7 @@ services:
 
   mcp-server:
     image: python:3.12-slim
+    init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-mcp-dev.sh"]
     ports:
@@ -78,6 +81,7 @@ services:
       - ${WORKSPACE_PATH:-..}:/workspace:ro
       - ${WORKSPACE_PATH:-..}:/host/code-qa-agent:ro
       - mcp-server-venv:/opt/venv
+      - ./coverage-output:/app/coverage
     environment:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"

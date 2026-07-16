@@ -1,0 +1,20 @@
+[run]
+branch = True
+parallel = True
+source = /app
+omit =
+    /app/e2e-tests/*
+    /app/tests/*
+    /app/.chainlit/*
+    /app/data/*
+    /app/__pycache__/*
+    */__pycache__/*
+    */site-packages/*
+
+[report]
+show_missing = True
+skip_covered = True
+sort = Miss
+
+[html]
+directory = coverage-output/html

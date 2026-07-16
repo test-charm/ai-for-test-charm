@@ -1,3 +1,27 @@
+# --- coverage bootstrap (driven by COVERAGE_DATA_FILE env var) ---
+import os as _os
+_coverage_data_file = _os.environ.get("COVERAGE_DATA_FILE", "")
+if _coverage_data_file:
+    import atexit as _atexit, signal as _signal, sys as _sys
+    import coverage as _coverage
+    _rcfile = _os.environ.get("COVERAGE_RCFILE", ".coveragerc")
+    _cov = _coverage.Coverage(data_file=_coverage_data_file, config_file=_rcfile, branch=True)
+    _cov.start()
+    # Touch a marker file to verify coverage bootstrap ran
+    _marker_dir = _os.path.dirname(_coverage_data_file)
+    _os.makedirs(_marker_dir, exist_ok=True)
+    with open(_os.path.join(_marker_dir, "bootstrap-ran.txt"), "w") as _f:
+        _f.write(f"coverage bootstrap ran at pid={_os.getpid()}\n")
+    def _save_coverage():
+        _cov.stop()
+        _cov.save()
+    _atexit.register(_save_coverage)
+    for _sig in (_signal.SIGTERM, _signal.SIGINT):
+        _signal.signal(_sig, lambda signum, frame, s=_sig: (
+            _save_coverage(), _signal.signal(s, _signal.SIG_DFL), _os.kill(_os.getpid(), s)
+        ))
+# --- end coverage bootstrap ---
+
 import logging
 import time
 import chainlit as cl
@@ -85,3 +109,10 @@ async def on_message(message: cl.Message):
         tool_calls,
     )
     await msg.send()
+
+    # Save coverage data after each response (for e2e test coverage collection)
+    if _coverage_data_file:
+        try:
+            _save_coverage()
+        except Exception:
+            pass
