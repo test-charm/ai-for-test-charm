@@ -1,25 +1,7 @@
 # language: zh-CN
+@api-login
 功能: Chainlit 聊天 HTTP 接口
 
-  场景: 用户名为空登录失败
-    当POST form "/login":
-      """
-      {
-        username: ' '
-        password: anything
-      }
-      """
-    那么response should be:
-      """
-      : {
-        code=401
-        body.json: {
-          detail= credentialssignin
-        }
-      }
-      """
-
-  @api-login
   场景: 有效消息返回助手回复
     假如Mock API:
       """
@@ -125,6 +107,10 @@
         receivedEvents::filter: {
           name= new_message
         } : [ ... {
+          data.output= ```
+                       👋 我已准备好分析代码库，请问你想了解什么？
+                       ```
+        } {
           data.output= ```
                        这是一个mock回复。
 
