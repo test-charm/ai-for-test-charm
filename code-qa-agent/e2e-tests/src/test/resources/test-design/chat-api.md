@@ -10,7 +10,47 @@
 
 1. 登录失败分支。
 2. 聊天消息 payload 非法分支。
-3. 聊天成功分支，以及后端对 LLM 接口的两次调用行为。
+3. 聊天成功分支，以及后端对 LLM 接口的多次调用行为。
+4. Agent ReAct 循环中的重试路径（无工具调用重试、规划文本重试）。
+5. Agent 连续多次工具调用路径。
+
+## 被测模块分析
+
+### `agent.py` 核心流程
+
+```text
+[astream_response()]
+  └─ 首轮注入目录树 ──→ ReAct 循环
+                          │
+                          ├─ has_tool_results == False
+                          │   └─ llm_with_required_tool (tool_choice=required)
+                          │       ├─ 有 tool_calls ──→ 执行工具 → 继续循环
+                          │       └─ 无 tool_calls ──→ 追加"请使用工具"提示 → 继续循环
+                          │
+                          ├─ has_tool_results == True
+                          │   └─ llm_with_tools (tool_choice=auto/null)
+                          │       ├─ 有 tool_calls ──→ 执行工具 → 继续循环
+                          │       ├─ 无 tool_calls + 规划文本 ──→ 追加"请给最终答案" → 继续
+                          │       └─ 无 tool_calls + 最终答案 ──→ yield → return
+                          │
+                          └─ 达到 MAX_ITERATIONS ──→ 警告 → return
+```
+
+### `_required_tool_choice()` 逻辑
+
+| provider | model 含 "deepseek" | 返回值 |
+|----------|---------------------|--------|
+| anthropic | N/A | "any" |
+| openai | 否 | "required" |
+| openai | 是 | "auto" |
+
+> **限制**：e2e 环境固定使用 `CQA_LLM_MODEL=mock-gpt`（不含 "deepseek"），无法在 e2e 中测试 DeepSeek 路径。该路径留作单元测试或环境变量覆盖测试。
+
+### `_looks_like_incomplete_response()` 检测关键词
+
+- `let me also look`, `let me look`, `let me inspect`, `let me explore`, `let me check`, `let me search`
+- `i'll look`, `i will look`, `i should look`
+- `next, i'll`, `next, i will`
 
 ## 输入因子
 
@@ -22,7 +62,18 @@
 | `engine_sid` | 由 polling open 响应动态生成 | `/ws/socket.io` 首次 GET 的输出，后续 polling POST/GET 继续作为输入。 |
 | `client_message.message.id` | 非 UUID；有效 UUID v4 | `chainlit.emitter.process_message()` 会强制要求 v4 UUID。 |
 | `client_message.message.output` | 非空文本 | 首次交互时同时决定线程标题。 |
-| LLM mock 响应序列 | 缺省；两段固定响应 | 成功路径需要先返回 `tool_calls`，再返回最终回答。 |
+| LLM mock 响应序列 | 见等价类列表 | 模拟 LLM 返回不同响应序列，驱动 agent 不同代码路径。 |
+
+### LLM mock 响应序列等价类
+
+| 等价类 | 说明 | 驱动路径 |
+| --- | --- | --- |
+| 直接回答（无 tool_calls） | 首轮 LLM 不调用工具，直接返回文本 | 无工具重试路径 |
+| tool_calls → 最终回答 | 标准成功路径 | 已有用例覆盖 |
+| tool_calls → 规划文本 | LLM 有工具结果后返回"let me check..." | 规划文本重试路径 |
+| tool_calls → tool_calls → 最终回答 | 连续多次工具调用 | 多轮工具调用路径 |
+| 含 `finish_reason=tool_calls` | 标准工具调用响应 | 所有工具调用场景 |
+| 含 `finish_reason=stop` | 标准文本响应 | 所有文本回答场景 |
 
 ## 输出因子
 
@@ -31,7 +82,7 @@
 | 登录响应 | HTTP 状态码与 JSON `detail/success`。 |
 | polling 响应 | `task_start`、`new_message`、`task_end` 等 socket.io 包。 |
 | 线程持久化结果 | `/project/threads` 中线程、用户消息、助手消息、`on_message` 运行步骤。 |
-| LLM 出站请求 | 调用次数，以及 `tool_choice=required/auto` 两个分支。 |
+| LLM 出站请求 | 调用次数，以及每轮 `tool_choice` 值（`required` / `null`）。 |
 
 ## 流程图
 
@@ -50,7 +101,11 @@
                         ↓
                [POST client_message polling]
                   ├─ message.id 非 UUID ──→ [Error 消息] → [/project/threads 为空]
-                  └─ message.id 为 UUID v4 ──→ [调用 LLM 两次]
+                  └─ message.id 为 UUID v4 ──→ [Agent ReAct 循环]
+                                              ├─ 首轮无 tool_calls ──→ 重试 (tool_choice=required)
+                                              ├─ tool_calls → 无 tool_calls + 规划 ──→ 重试
+                                              ├─ tool_calls → tool_calls → 最终回答
+                                              └─ tool_calls → 最终回答 (已有用例)
                                               ↓
                                       [助手消息落库]
                                               ↓
@@ -59,23 +114,36 @@
 
 ## 用例设计
 
-| 用例名 | `login.username` | `message.id` | LLM mock | 期望输出 |
-| --- | --- | --- | --- | --- |
-| 用户名为空登录失败 | 空白字符串 | N/A | N/A | `/login` 返回 `401` 与 `credentialssignin`。 |
-| 非 UUID 消息 id 返回错误消息且不落库 | 非空字符串 | 非 UUID | 不需要 | polling 返回 `Error` 消息，`/project/threads` 返回空数组。 |
-| 有效消息返回助手回复并落库 | 非空字符串 | UUID v4 | 第 1 次 `tool_calls`，第 2 次最终回答 | 线程保存问答内容，MockServer 记录 2 次 LLM 请求，分别命中 `required` 与 `auto`。 |
+| 用例名 | `login.username` | `message.id` | LLM mock 序列 | 期望 LLM 请求数 | 期望 tool_choice 序列 |
+| --- | --- | --- | --- | --- | --- |
+| 用户名为空登录失败 | 空白字符串 | N/A | N/A | 0 | N/A |
+| 非 UUID 消息 id 返回错误消息且不落库 | 非空字符串 | 非 UUID | 不需要 | 0 | N/A |
+| 有效消息返回助手回复并落库 | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | required → null |
+| 无工具调用时模型被要求重试 | 非空字符串 | UUID v4 | 直接回答(无tool_calls) → tool_calls → 最终回答 | 3 | required → required → null |
+| 模型返回规划文本后触发重试 | 非空字符串 | UUID v4 | tool_calls → 规划文本(let me check) → 最终回答 | 3 | required → null → null |
+| 模型连续多次工具调用 | 非空字符串 | UUID v4 | tool_calls(列出目录) → tool_calls(读取文件) → 最终回答 | 3 | required → null → null |
 
 ## 覆盖性检查
 
 1. 代码路径覆盖：
-   - 登录失败路径。
-   - `client_message` 在 `message.id` 非法时的错误路径。
-   - `client_message` 正常调用 agent 并落库的成功路径。
+   - 登录失败路径。 ✅
+   - `client_message` 在 `message.id` 非法时的错误路径。 ✅
+   - `client_message` 正常调用 agent 并落库的成功路径。 ✅
+   - agent 首轮无 tool_calls 重试路径（`agent.py:247-263`）。 ✅ 新增
+   - agent 规划文本重试路径（`agent.py:265-280`）。 ✅ 新增
+   - agent 连续多轮工具调用路径（`agent.py:293-321`）。 ✅ 新增
+   - `_looks_like_incomplete_response()` 函数。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。
-   - LLM mock 的成功双响应路径覆盖。
+   - LLM mock 的所有等价类均覆盖。
 3. 条件分支覆盖：
    - 登录回调 `username.strip()` 为假 / 为真。
    - `uuid.UUID(step_dict["id"]).version == 4` 为假 / 为真。
    - agent 首轮 `tool_choice=required` 与后续 `tool_choice=auto` 两个分支均覆盖。
+   - `not tool_calls and not has_tool_results` 为真 / 为假（新增）。
+   - `not tool_calls and has_tool_results and _looks_like_incomplete_response(...)` 为真 / 为假（新增）。
+   - `tool_calls` 为真且循环继续的分支（新增）。
+4. 已知缺口：
+   - DeepSeek 模型 `tool_choice=auto` 路径（`agent.py:35-36`）：e2e 环境固定使用 `mock-gpt` 模型，无法动态切换。该路径依赖环境变量覆盖测试。
+   - `MAX_ITERATIONS` 达到上限路径（`agent.py:323`）：需 200 轮循环，不具实用性。

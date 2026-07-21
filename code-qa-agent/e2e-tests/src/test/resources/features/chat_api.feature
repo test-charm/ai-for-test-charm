@@ -5,66 +5,41 @@
   场景: 有效消息返回助手回复
     假如Mock API:
       """
-      : {
-        path.value= '/v1/chat/completions'
-        method.value= 'POST'
-      }
+      POST: '/v1/chat/completions'
       ---
       body: ```
             {
-              "id": "chatcmpl-tool-1",
-              "object": "chat.completion",
               "created": 1752050400,
-              "model": "mock-gpt",
               "choices": [
                 {
-                  "index": 0,
                   "message": {
                     "role": "assistant",
-                    "content": "",
                     "tool_calls": [
                       {
                         "id": "call_1",
-                        "type": "function",
                         "function": {
                           "name": "list_directory",
                           "arguments": "{\"path\": \".\", \"max_depth\": 1}"
                         }
                       }
                     ]
-                  },
-                  "finish_reason": "tool_calls"
+                  }
                 }
-              ],
-              "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 10,
-                "total_tokens": 20
-              }
+              ]
             }
             ```
       ---
       body: ```
             {
-              "id": "chatcmpl-final-1",
-              "object": "chat.completion",
               "created": 1752050401,
-              "model": "mock-gpt",
               "choices": [
                 {
-                  "index": 0,
                   "message": {
                     "role": "assistant",
                     "content": "这是一个mock回复。"
-                  },
-                  "finish_reason": "stop"
+                  }
                 }
-              ],
-              "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 10,
-                "total_tokens": 20
-              }
+              ]
             }
             ```
       """
@@ -509,3 +484,377 @@
        }
      }]
      """
+
+  场景: 无工具调用时模型被要求重试
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            role: assistant
+            content: 'I can answer this directly without tools.'
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            role: assistant
+            toolCalls: [{
+              function: {
+                name: list_directory
+                arguments: ```
+                           {"path": ".", "max_depth": 1}
+                           ```
+              }
+            }]
+          }
+        }]
+      }
+      ---
+      body: ```
+            {
+              "created": 1752050402,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "这是一个重试后使用工具得到的回复。"
+                  }
+                }
+              ]
+            }
+            ```
+      """
+    当POST "/set-session-cookie":
+      """
+      {
+        "session_id": "${session-id}"
+      }
+      """
+    那么response should be:
+      """
+      : {
+        code=200
+        body.json.message='Session cookie set'
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "${session-id}",
+        "userEnv": "{}"
+      }
+      """
+    当发送事件 "connection_successful"
+    当发送事件 "client_message":
+      """
+      {
+        "message": {
+          "id": "${message-id}",
+          "createdAt": "2026-07-09T00:00:00.000Z",
+          "output": "hello retry",
+          "name": "joseph"
+        }
+      }
+      """
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是一个重试后使用工具得到的回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: required
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: required
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: null
+        }
+      }]
+      """
+
+  场景: 模型返回规划文本后触发重试
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body: ```
+            {
+              "created": 1752050500,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "name": "list_directory",
+                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "created": 1752050501,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "Let me check the code structure first..."
+                  }
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "created": 1752050502,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "这是规划重试后的最终回复。"
+                  }
+                }
+              ]
+            }
+            ```
+      """
+    当POST "/set-session-cookie":
+      """
+      {
+        "session_id": "${session-id}"
+      }
+      """
+    那么response should be:
+      """
+      : {
+        code=200
+        body.json.message='Session cookie set'
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "${session-id}",
+        "userEnv": "{}"
+      }
+      """
+    当发送事件 "connection_successful"
+    当发送事件 "client_message":
+      """
+      {
+        "message": {
+          "id": "${message-id}",
+          "createdAt": "2026-07-09T00:00:00.000Z",
+          "output": "hello planning",
+          "name": "joseph"
+        }
+      }
+      """
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是规划重试后的最终回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: required
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: null
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: null
+        }
+      }]
+      """
+
+  场景: 模型连续多次工具调用后返回最终回答
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body: ```
+            {
+              "created": 1752050600,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "name": "list_directory",
+                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "created": 1752050601,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "tool_calls": [
+                      {
+                        "function": {
+                          "name": "read_file",
+                          "arguments": "{\"file_path\": \"app.py\"}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "created": 1752050602,
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "这是多次工具调用后的最终回复。"
+                  }
+                }
+              ]
+            }
+            ```
+      """
+    当POST "/set-session-cookie":
+      """
+      {
+        "session_id": "${session-id}"
+      }
+      """
+    那么response should be:
+      """
+      : {
+        code=200
+        body.json.message='Session cookie set'
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "${session-id}",
+        "userEnv": "{}"
+      }
+      """
+    当发送事件 "connection_successful"
+    当发送事件 "client_message":
+      """
+      {
+        "message": {
+          "id": "${message-id}",
+          "createdAt": "2026-07-09T00:00:00.000Z",
+          "output": "hello multi-tool",
+          "name": "joseph"
+        }
+      }
+      """
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是多次工具调用后的最终回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: required
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: null
+          messages[2].tool_calls[0].function.name= list_directory
+        }
+      } {
+        body.json: {
+          stream: false
+          model: mock-gpt
+          tool_choice: null
+          messages[4].tool_calls[0].function.name= read_file
+        }
+      }]
+      """

@@ -1,5 +1,6 @@
 package org.testcharm.e2e;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcharm.dal.DAL;
 import org.testcharm.interpreter.InterpreterException;
 import org.testcharm.interpreter.SyntaxException;
@@ -201,15 +202,17 @@ public class DALMockServer {
         @SneakyThrows
         @SuppressWarnings("unchecked")
         public void giveBody(HttpResponse httpResponse) {
-            if (body instanceof List<?> bytes) {
+            if (body instanceof String string) {
+                httpResponse.withBody(string);
+            } else if (body instanceof List<?> bytes) {
                 byte[] binary = new byte[bytes.size()];
                 for (int i = 0; i < bytes.size(); i++) {
                     binary[i] = (Byte) bytes.get(i);
                 }
                 httpResponse.withBody(binary);
-                return;
+            } else {
+                httpResponse.withBody(new ObjectMapper().writeValueAsString(body));
             }
-            httpResponse.withBody(String.valueOf(body));
         }
     }
 }
