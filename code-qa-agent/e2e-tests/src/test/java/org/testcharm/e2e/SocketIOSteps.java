@@ -6,13 +6,12 @@ import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.testcharm.dal.Assertions.expect;
 
@@ -21,16 +20,10 @@ public class SocketIOSteps {
     private static final Pattern THREAD_ID_PATTERN = Pattern.compile("\"thread_id\":\"([^\"]+)\"");
 
     @Autowired
-    private ApplicationSteps applicationSteps;
-
-    @Value("${app.base-url}")
-    private String baseUrl;
-
     private SocketIOClient client;
 
     @当("连接 Socket.IO:")
     public void connect(String authJson) throws Exception {
-        client = new SocketIOClient();
         String resolved = resolveVariables(authJson.trim());
         JSONObject authObj = new JSONObject(resolved);
         Map<String, String> auth = new HashMap<>();
@@ -38,17 +31,7 @@ public class SocketIOSteps {
             String key = it.next();
             auth.put(key, authObj.optString(key));
         }
-
-        Map<String, List<String>> extraHeaders = null;
-        Map<String, String> cookies = applicationSteps.getCookies();
-        if (!cookies.isEmpty()) {
-            String cookieValue = cookies.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(Collectors.joining("; "));
-            extraHeaders = Map.of("Cookie", List.of(cookieValue));
-        }
-
-        client.connect(baseUrl, auth, extraHeaders);
+        client.connect(auth);
     }
 
     @当("发送事件 {string}")
@@ -142,18 +125,17 @@ public class SocketIOSteps {
                     "userEnv": "{}"
                   }
                 """);
-//        emitEvent("connection_successful");
-//        applicationSteps.captureResponseState();
-//        emitEventWithData("client_message", """
-//                  {
-//                    "message": {
-//                      "id": "${message-id}",
-//                      "createdAt": "2026-07-09T00:00:00.000Z",
-//                      "output": "hello retry",
-//                      "name": "joseph"
-//                    }
-//                  }
-//                """);
-//        applicationSteps.captureResponseState();
+        TimeUnit.MILLISECONDS.sleep(100);
+        emitEvent("connection_successful");
+        emitEventWithData("client_message", """
+                  {
+                    "message": {
+                      "id": "${message-id}",
+                      "createdAt": "2026-07-09T00:00:00.000Z",
+                      "output": "%s",
+                      "name": "joseph"
+                    }
+                  }
+                """.formatted(message));
     }
 }

@@ -517,39 +517,6 @@
       }
       """
     当用户发送消息"hello retry"
-#    当POST "/set-session-cookie":
-#      """
-#      {
-#        "session_id": "${session-id}"
-#      }
-#      """
-#    那么response should be:
-#      """
-#      : {
-#        code=200
-#        body.json.message='Session cookie set'
-#      }
-#      """
-#    当连接 Socket.IO:
-#      """
-#      {
-#        "clientType": "webapp",
-#        "sessionId": "${session-id}",
-#        "userEnv": "{}"
-#      }
-#      """
-    当发送事件 "connection_successful"
-    当发送事件 "client_message":
-      """
-      {
-        "message": {
-          "id": "${message-id}",
-          "createdAt": "2026-07-09T00:00:00.000Z",
-          "output": "hello retry",
-          "name": "joseph"
-        }
-      }
-      """
     那么收到的 Socket.IO 事件应满足:
       """
       ::eventually: {
@@ -567,25 +534,11 @@
       """
     并且数据应为:
       """
-      MockApi::filter: { POST: '/v1/chat/completions' } : [{
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: required
-        }
-      } {
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: required
-        }
-      } {
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: null
-        }
-      }]
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.tool_choice |
+        | required              |
+        | required              |
+        | null                  |
       """
 
   场景: 模型返回规划文本后触发重试

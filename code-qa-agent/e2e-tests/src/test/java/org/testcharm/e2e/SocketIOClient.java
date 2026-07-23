@@ -3,48 +3,40 @@ package org.testcharm.e2e;
 import lombok.Getter;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.aop.framework.Advised;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import org.testcharm.cucumber.restful.RestfulStep;
-import org.testcharm.jfactory.JFactory;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
-/**
- * Minimal Socket.IO client using HTTP long-polling transport.
- * Implements just enough Socket.IO protocol for Chainlit e2e tests.
- */
+@Component
 public class SocketIOClient {
 
     @Getter
     private final List<Map<String, Object>> receivedEvents = new CopyOnWriteArrayList<>();
     private final CountDownLatch connectedLatch = new CountDownLatch(1);
-    private final RestfulStep restfulStep = new RestfulStep();
     private volatile boolean connected;
     private volatile boolean running;
     private String engineSid;
-    private Map<String, List<String>> extraHeaders;
     private int pollSeq;
     private volatile Thread pollThread;
-    private String wsBasePath;
+    private final String wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
 
-    public void connect(String baseUrl, Map<String, String> auth, Map<String, List<String>> extraHeaders) throws Exception {
-        restfulStep.setBaseUrl(baseUrl);
-        restfulStep.setJFactory(new JFactory());
-        wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
+    @Autowired
+    @Lazy
+    private RestfulStep restfulStep;
 
-        Map<String, List<String>> headers = new LinkedHashMap<>();
-        if (extraHeaders != null) {
-            headers.putAll(extraHeaders);
-        }
-        this.extraHeaders = headers;
+    public void connect(Map<String, String> auth) throws Exception {
+        resolveScopedProxy();
 
         // Step 1: Engine.IO handshake
         String handshakeResp = httpGet(wsBasePath);
-        if (handshakeResp == null || handshakeResp.isEmpty()) {
-            throw new RuntimeException("Empty handshake response");
-        }
+
         // Parse sid from "0{...}"
         if (handshakeResp.startsWith("0")) {
             String handshakeData = handshakeResp.substring(1);
@@ -89,26 +81,29 @@ public class SocketIOClient {
         }
     }
 
+    /**
+     * Force Spring to resolve the cucumber-glue scoped proxy on the current
+     * (Cucumber) thread, then unwrap it so the poll thread can use the actual
+     * RestfulStep instance without needing the scope to be active.
+     */
+    private void resolveScopedProxy() {
+        if (restfulStep instanceof Advised advised) {
+            try {
+                restfulStep = (RestfulStep) advised.getTargetSource().getTarget();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to resolve RestfulStep scoped proxy", e);
+            }
+        }
+    }
+
     private String httpGet(String path) {
         restfulStep.get(path);
-        addHeaders(restfulStep);
         return restfulStep.response("body.string");
     }
 
     private String httpPost(String path, String body) throws IOException {
         restfulStep.post(path, "text/plain", body);
-        addHeaders(restfulStep);
         return restfulStep.response("body.string");
-    }
-
-    private void addHeaders(RestfulStep restfulStep) {
-        if (extraHeaders != null) {
-            for (Map.Entry<String, List<String>> entry : extraHeaders.entrySet()) {
-                for (String value : entry.getValue()) {
-                    restfulStep.header(entry.getKey(), value);
-                }
-            }
-        }
     }
 
     private void processMessages(String text) {
