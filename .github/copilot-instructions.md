@@ -177,14 +177,26 @@ docker compose --profile deepseek up -d
 
 #### 收集覆盖率
 
-`app.py` 和 `mcp_server.py` 顶部有覆盖率引导代码，由 `COVERAGE_DATA_FILE` 环境变量控制。Docker Compose 启动时通过 `run-*-dev.sh` 脚本自动设置该变量，每次请求结束后自动保存 `.coverage-*` 数据文件到 `coverage-output/` 目录。
+`app.py` 和 `mcp_server.py` 顶部有覆盖率引导代码，由 `COVERAGE_DATA_FILE` 环境变量控制。Docker Compose 启动时通过 `run-*-dev.sh` 脚本自动设置该变量，每次请求结束后自动保存 `.coverage-*` 数据文件到 `coverage-output/` 目录。文件名含容器 hash，多次运行的数据自动共存。
 
 ```bash
 cd e2e-tests
-./gradlew cucumber             # 先运行测试
-./collect-coverage.sh          # 合并数据 + 输出报告
+
+# 1. 默认模型测试
+docker compose --profile default up -d
+./gradlew cucumber -Ptags='not @deepseek-model'
+
+# 2. DeepSeek 模型测试
+docker compose --profile default down
+docker compose --profile deepseek up -d
+./gradlew cucumber -Ptags='@deepseek-model'
+
+# 3. 合并所有覆盖率数据
+./collect-coverage.sh          # 自动合并 coverage-output/ 下所有 .coverage-* 文件
 open coverage-output/html/index.html
 ```
+
+`collect-coverage.sh` 自动检测运行中的容器（默认或 deepseek），在其内部执行 `coverage combine` 合并全部数据。
 
 #### 覆盖率机制
 

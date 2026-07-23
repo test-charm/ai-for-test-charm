@@ -30,15 +30,20 @@ echo "$DATA_FILES" | while read -r f; do echo "  $(basename "$f")"; done
 # Run coverage inside the container where source paths are /app/...
 # The coverage-output directory is already bind-mounted to /app/coverage/ inside the container.
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-CONTAINER_NAME="code-qa-agent-e2e-code-qa-agent-1"
 
-# Check if container is running; if not, start it temporarily
-NEED_STOP=false
-if ! docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
-  log_info "Starting code-qa-agent container for report generation..."
-  docker compose -f "$COMPOSE_FILE" --profile default up -d code-qa-agent 2>&1 | tail -1
-  NEED_STOP=true
-  sleep 5
+# Find any running code-qa-agent container (default or deepseek profile)
+CONTAINER_NAME=""
+for name in "code-qa-agent-e2e-code-qa-agent-1" "code-qa-agent-e2e-code-qa-agent-deepseek-1"; do
+  if docker inspect "$name" --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
+    CONTAINER_NAME="$name"
+    break
+  fi
+done
+
+if [ -z "$CONTAINER_NAME" ]; then
+  echo "ERROR: No code-qa-agent container running."
+  echo "       Start one with: docker compose --profile default up -d"
+  exit 1
 fi
 
 log_info "Combining coverage data..."
@@ -52,10 +57,5 @@ docker exec "$CONTAINER_NAME" sh -c \
 log_info "Generating HTML report..."
 docker exec "$CONTAINER_NAME" sh -c \
   '/opt/venv/bin/coverage html -d /app/coverage/html'
-
-if [ "$NEED_STOP" = true ]; then
-  log_info "Stopping temporary container..."
-  docker compose -f "$COMPOSE_FILE" --profile default stop code-qa-agent 2>&1 | tail -1
-fi
 
 log_ok "HTML report: $COVERAGE_DIR/html/index.html"
