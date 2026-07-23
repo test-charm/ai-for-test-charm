@@ -493,7 +493,6 @@
       body(LlmResponse): {
         choices: [{
           message: {
-            role: assistant
             content: 'I can answer this directly without tools.'
           }
         }]
@@ -502,54 +501,43 @@
       body(LlmResponse): {
         choices: [{
           message: {
-            role: assistant
-            toolCalls: [{
-              function: {
-                name: list_directory
-                arguments: ```
-                           {"path": ".", "max_depth": 1}
-                           ```
-              }
+            toolCalls!: [{
+              function(ListDirectory): { ... }
             }]
           }
         }]
       }
       ---
-      body: ```
-            {
-              "created": 1752050402,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "这是一个重试后使用工具得到的回复。"
-                  }
-                }
-              ]
-            }
-            ```
-      """
-    当POST "/set-session-cookie":
-      """
-      {
-        "session_id": "${session-id}"
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: "这是一个重试后使用工具得到的回复。"
+          }
+        }]
       }
       """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.json.message='Session cookie set'
-      }
-      """
-    当连接 Socket.IO:
-      """
-      {
-        "clientType": "webapp",
-        "sessionId": "${session-id}",
-        "userEnv": "{}"
-      }
-      """
+    当用户发送消息"hello retry"
+#    当POST "/set-session-cookie":
+#      """
+#      {
+#        "session_id": "${session-id}"
+#      }
+#      """
+#    那么response should be:
+#      """
+#      : {
+#        code=200
+#        body.json.message='Session cookie set'
+#      }
+#      """
+#    当连接 Socket.IO:
+#      """
+#      {
+#        "clientType": "webapp",
+#        "sessionId": "${session-id}",
+#        "userEnv": "{}"
+#      }
+#      """
     当发送事件 "connection_successful"
     当发送事件 "client_message":
       """

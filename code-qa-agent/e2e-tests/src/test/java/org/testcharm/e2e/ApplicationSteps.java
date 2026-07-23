@@ -1,6 +1,5 @@
 package org.testcharm.e2e;
 
-import io.cucumber.java.AfterStep;
 import io.cucumber.java.Before;
 import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +9,9 @@ import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 import org.testcharm.jfactory.JFactory;
 
+import java.lang.reflect.Field;
 import java.net.CookieHandler;
 import java.net.CookieManager;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -71,11 +70,6 @@ public class ApplicationSteps {
                     password: anything
                 }
                 """);
-        captureResponseState();
-    }
-
-    @AfterStep
-    public void afterStep() {
         captureResponseState();
     }
 

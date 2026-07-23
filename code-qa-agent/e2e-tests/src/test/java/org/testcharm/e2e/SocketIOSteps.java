@@ -3,9 +3,11 @@ package org.testcharm.e2e;
 import io.cucumber.java.After;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
+import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 
 import java.util.*;
@@ -114,5 +116,44 @@ public class SocketIOSteps {
             json = json.replace("${" + entry.getKey() + "}", entry.getValue());
         }
         return json;
+    }
+
+    @Autowired
+    private RestfulStep restfulStep;
+
+    @SneakyThrows
+    @当("用户发送消息{string}")
+    public void 用户发送消息(String message) {
+        restfulStep.postInJson("/set-session-cookie", """
+                  {
+                    "session_id": "${session-id}"
+                  }
+                """);
+        restfulStep.responseShouldBe("""
+                  : {
+                    code=200
+                    body.json.message='Session cookie set'
+                  }
+                """);
+        connect("""
+                  {
+                    "clientType": "webapp",
+                    "sessionId": "${session-id}",
+                    "userEnv": "{}"
+                  }
+                """);
+//        emitEvent("connection_successful");
+//        applicationSteps.captureResponseState();
+//        emitEventWithData("client_message", """
+//                  {
+//                    "message": {
+//                      "id": "${message-id}",
+//                      "createdAt": "2026-07-09T00:00:00.000Z",
+//                      "output": "hello retry",
+//                      "name": "joseph"
+//                    }
+//                  }
+//                """);
+//        applicationSteps.captureResponseState();
     }
 }
