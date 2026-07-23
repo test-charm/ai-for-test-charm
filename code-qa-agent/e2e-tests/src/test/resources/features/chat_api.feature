@@ -546,88 +546,33 @@
       """
       POST: '/v1/chat/completions'
       ---
-      body: ```
-            {
-              "created": 1752050500,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "tool_calls": [
-                      {
-                        "function": {
-                          "name": "list_directory",
-                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050501,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "Let me check the code structure first..."
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: 'Let me check the code structure first...'
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050502,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "这是规划重试后的最终回复。"
-                  }
-                }
-              ]
-            }
-            ```
-      """
-    当POST "/set-session-cookie":
-      """
-      {
-        "session_id": "${session-id}"
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是规划重试后的最终回复。'
+          }
+        }]
       }
       """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.json.message='Session cookie set'
-      }
-      """
-    当连接 Socket.IO:
-      """
-      {
-        "clientType": "webapp",
-        "sessionId": "${session-id}",
-        "userEnv": "{}"
-      }
-      """
-    当发送事件 "connection_successful"
-    当发送事件 "client_message":
-      """
-      {
-        "message": {
-          "id": "${message-id}",
-          "createdAt": "2026-07-09T00:00:00.000Z",
-          "output": "hello planning",
-          "name": "joseph"
-        }
-      }
-      """
+    当用户发送消息"hello planning"
     那么收到的 Socket.IO 事件应满足:
       """
       ::eventually: {
@@ -645,25 +590,11 @@
       """
     并且数据应为:
       """
-      MockApi::filter: { POST: '/v1/chat/completions' } : [{
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: required
-        }
-      } {
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: null
-        }
-      } {
-        body.json: {
-          stream: false
-          model: mock-gpt
-          tool_choice: null
-        }
-      }]
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.tool_choice |
+        | required              |
+        | null                  |
+        | null                  |
       """
 
   场景: 模型连续多次工具调用后返回最终回答
@@ -671,95 +602,37 @@
       """
       POST: '/v1/chat/completions'
       ---
-      body: ```
-            {
-              "created": 1752050600,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "tool_calls": [
-                      {
-                        "function": {
-                          "name": "list_directory",
-                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050601,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "tool_calls": [
-                      {
-                        "function": {
-                          "name": "read_file",
-                          "arguments": "{\"file_path\": \"app.py\"}"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls!: [{
+              function(ReadFile): {
+                arguments: '{"file_path": "app.py"}'
+              }
+            }]
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050602,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "这是多次工具调用后的最终回复。"
-                  }
-                }
-              ]
-            }
-            ```
-      """
-    当POST "/set-session-cookie":
-      """
-      {
-        "session_id": "${session-id}"
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是多次工具调用后的最终回复。'
+          }
+        }]
       }
       """
-    那么response should be:
-      """
-      : {
-        code=200
-        body.json.message='Session cookie set'
-      }
-      """
-    当连接 Socket.IO:
-      """
-      {
-        "clientType": "webapp",
-        "sessionId": "${session-id}",
-        "userEnv": "{}"
-      }
-      """
-    当发送事件 "connection_successful"
-    当发送事件 "client_message":
-      """
-      {
-        "message": {
-          "id": "${message-id}",
-          "createdAt": "2026-07-09T00:00:00.000Z",
-          "output": "hello multi-tool",
-          "name": "joseph"
-        }
-      }
-      """
+    当用户发送消息"hello multi-tool"
     那么收到的 Socket.IO 事件应满足:
       """
       ::eventually: {
@@ -779,21 +652,15 @@
       """
       MockApi::filter: { POST: '/v1/chat/completions' } : [{
         body.json: {
-          stream: false
-          model: mock-gpt
           tool_choice: required
         }
       } {
         body.json: {
-          stream: false
-          model: mock-gpt
           tool_choice: null
           messages[2].tool_calls[0].function.name= list_directory
         }
       } {
         body.json: {
-          stream: false
-          model: mock-gpt
           tool_choice: null
           messages[4].tool_calls[0].function.name= read_file
         }

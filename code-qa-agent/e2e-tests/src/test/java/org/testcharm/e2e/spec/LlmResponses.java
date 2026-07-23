@@ -41,7 +41,15 @@ public class LlmResponses {
         @Override
         public void main() {
             property("name").defaultValue("list_directory");
-            property("arguments").defaultValue("{\"path\":\"/\"}");
+            property("arguments").defaultValue("{\"path\":\".\"}");
+        }
+    }
+
+    public static class ReadFile extends Function {
+        @Override
+        public void main() {
+            property("name").defaultValue("read_file");
+            property("arguments").defaultValue("{\"file_path\":\"app.py\"}");
         }
     }
 }
