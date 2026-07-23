@@ -27,6 +27,7 @@ services:
     restart: unless-stopped
 
   code-qa-agent:
+    profiles: ["default"]
     image: python:3.12-slim
     init: true
     working_dir: /app
@@ -69,7 +70,52 @@ services:
       start_period: 300s
     restart: unless-stopped
 
+  code-qa-agent-deepseek:
+    profiles: ["deepseek"]
+    image: python:3.12-slim
+    init: true
+    working_dir: /app
+    command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
+    ports:
+      - "18000:8000"
+    volumes:
+      - ..:/app
+      - ${WORKSPACE_PATH:-..}:/workspace:ro
+      - code-qa-agent-venv:/opt/venv
+      - ./coverage-output:/app/coverage
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+      CQA_LLM_PROVIDER: openai
+      CQA_LLM_MODEL: mock-deepseek-chat
+      CQA_LLM_API_KEY: mock-key
+      CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_WORKSPACE_PATH: /workspace
+      CQA_AUTH_PASSWORD: ""
+      CQA_DB_HOST: postgres
+      CQA_DB_PORT: 5432
+      CQA_DB_NAME: code_qa_agent
+      CQA_DB_USER: code_qa_agent
+      CQA_DB_PASSWORD: code_qa_agent
+      CHAINLIT_AUTH_SECRET: 7a296ea4e13bd219a4bfe8cf771a2e79c312f84dab7989b8069dc5f6975fe647
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+    restart: unless-stopped
+
   mcp-server:
+    profiles: ["default"]
     image: python:3.12-slim
     init: true
     working_dir: /app

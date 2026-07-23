@@ -152,9 +152,28 @@ e2e 测试位于 `e2e-tests/`，是 Java Cucumber 项目，通过 HTTP/WebSocket
 
 ```bash
 cd e2e-tests
-docker compose up -d          # 启动所有服务（含 mock-server、postgres）
-./gradlew cucumber             # 运行测试
+
+# 默认模型（mock-gpt），tool_choice=required
+docker compose --profile default up -d
+./gradlew cucumber -Ptags='not @deepseek-model'
+
+# DeepSeek 模型（mock-deepseek-chat），tool_choice=auto
+docker compose --profile default down
+docker compose --profile deepseek up -d
+./gradlew cucumber -Ptags='@deepseek-model'
 ```
+
+`docker-compose.yml` 使用 **Docker Compose Profile** 切换被测模型：
+
+```
+┌─ profile: default ─────────────┬─ profile: deepseek ────────────────┐
+│ code-qa-agent (18000:8000)      │ code-qa-agent-deepseek (18000)     │
+│ CQA_LLM_MODEL: mock-gpt         │ CQA_LLM_MODEL: mock-deepseek-chat  │
+│ tool_choice 首轮: required      │ tool_choice 首轮: auto             │
+└─────────────────────────────────┴────────────────────────────────────┘
+```
+
+两服务共享端口，不可同时运行。`chat_api.feature` 中 `@deepseek-model` tag 标记需 deepseek profile 的场景。
 
 #### 收集覆盖率
 
@@ -190,7 +209,8 @@ app.py / mcp_server.py
 | `.coveragerc` | coverage.py 配置（branch=True, source=/app, omit 排除项） |
 | `e2e-tests/run-chainlit-dev.sh` | 注入 `COVERAGE_DATA_FILE` 环境变量 |
 | `e2e-tests/run-mcp-dev.sh` | 同上 |
-| `e2e-tests/docker-compose.yml` | `init: true` + volume 挂载 |
+| `e2e-tests/docker-compose.yml` | `init: true` + volume 挂载 + profiles 切换模型 |
+| `e2e-tests/bootstrap-python.sh` | 容器初始化（OS 依赖 + Python venv），含 apt-get 重试 |
 | `e2e-tests/collect-coverage.sh` | 合并 `.coverage-*` 文件并生成 HTML 报告 |
 | `app.py` + `mcp_server.py` | 顶部 coverage bootstrap + 请求末尾 save |
 | `requirements.txt` | 含 `coverage>=7.0.0` |

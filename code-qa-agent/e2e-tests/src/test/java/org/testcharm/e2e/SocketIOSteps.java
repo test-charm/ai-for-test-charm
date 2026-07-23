@@ -125,7 +125,7 @@ public class SocketIOSteps {
                     "userEnv": "{}"
                   }
                 """);
-        TimeUnit.MILLISECONDS.sleep(200);
+        TimeUnit.MILLISECONDS.sleep(500);
         emitEvent("connection_successful");
         emitEventWithData("client_message", """
                   {

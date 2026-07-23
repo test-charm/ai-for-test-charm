@@ -20,7 +20,7 @@ DATA_FILES="$(find "$COVERAGE_DIR" -maxdepth 1 -name '.coverage-*' -type f 2>/de
 if [ -z "$DATA_FILES" ]; then
   echo "ERROR: No .coverage-* data files found in $COVERAGE_DIR"
   echo "       Make sure the containers were started with coverage enabled."
-  echo "       Try: docker compose up -d && ./gradlew cucumber"
+  echo "       Try: docker compose --profile default up -d && ./gradlew cucumber"
   exit 1
 fi
 
@@ -36,7 +36,7 @@ CONTAINER_NAME="code-qa-agent-e2e-code-qa-agent-1"
 NEED_STOP=false
 if ! docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
   log_info "Starting code-qa-agent container for report generation..."
-  docker compose -f "$COMPOSE_FILE" up -d code-qa-agent 2>&1 | tail -1
+  docker compose -f "$COMPOSE_FILE" --profile default up -d code-qa-agent 2>&1 | tail -1
   NEED_STOP=true
   sleep 5
 fi
@@ -55,7 +55,7 @@ docker exec "$CONTAINER_NAME" sh -c \
 
 if [ "$NEED_STOP" = true ]; then
   log_info "Stopping temporary container..."
-  docker compose -f "$COMPOSE_FILE" stop code-qa-agent 2>&1 | tail -1
+  docker compose -f "$COMPOSE_FILE" --profile default stop code-qa-agent 2>&1 | tail -1
 fi
 
 log_ok "HTML report: $COVERAGE_DIR/html/index.html"

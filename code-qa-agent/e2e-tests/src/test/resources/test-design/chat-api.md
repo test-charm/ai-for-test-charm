@@ -44,7 +44,7 @@
 | openai | 否 | "required" |
 | openai | 是 | "auto" |
 
-> **限制**：e2e 环境固定使用 `CQA_LLM_MODEL=mock-gpt`（不含 "deepseek"），无法在 e2e 中测试 DeepSeek 路径。该路径留作单元测试或环境变量覆盖测试。
+> e2e 通过 `@deepseek-model` tag + Docker Compose `deepseek` profile 覆盖 DeepSeek 路径。见场景「DeepSeek模型首轮tool_choice为auto」。
 
 ### `_looks_like_incomplete_response()` 检测关键词
 
@@ -122,6 +122,7 @@
 | 无工具调用时模型被要求重试 | 非空字符串 | UUID v4 | 直接回答(无tool_calls) → tool_calls → 最终回答 | 3 | required → required → null |
 | 模型返回规划文本后触发重试 | 非空字符串 | UUID v4 | tool_calls → 规划文本(let me check) → 最终回答 | 3 | required → null → null |
 | 模型连续多次工具调用 | 非空字符串 | UUID v4 | tool_calls(列出目录) → tool_calls(读取文件) → 最终回答 | 3 | required → null → null |
+| DeepSeek模型首轮tool_choice为auto | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | auto → null |
 
 ## 覆盖性检查
 
@@ -133,6 +134,7 @@
    - agent 规划文本重试路径（`agent.py:265-280`）。 ✅ 新增
    - agent 连续多轮工具调用路径（`agent.py:293-321`）。 ✅ 新增
    - `_looks_like_incomplete_response()` 函数。 ✅ 新增
+   - DeepSeek 模型 `tool_choice=auto` 路径（`agent.py:35-36`）。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。
@@ -145,5 +147,4 @@
    - `not tool_calls and has_tool_results and _looks_like_incomplete_response(...)` 为真 / 为假（新增）。
    - `tool_calls` 为真且循环继续的分支（新增）。
 4. 已知缺口：
-   - DeepSeek 模型 `tool_choice=auto` 路径（`agent.py:35-36`）：e2e 环境固定使用 `mock-gpt` 模型，无法动态切换。该路径依赖环境变量覆盖测试。
    - `MAX_ITERATIONS` 达到上限路径（`agent.py:323`）：需 200 轮循环，不具实用性。

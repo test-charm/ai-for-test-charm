@@ -666,3 +666,51 @@
         }
       }]
       """
+
+  @deepseek-model
+  场景: DeepSeek模型首轮tool_choice为auto
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是deepseek模型的mock回复。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"hello deepseek"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是deepseek模型的mock回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.tool_choice | body.json.model        |
+        | auto                  | mock-deepseek-chat     |
+        | null                  | mock-deepseek-chat     |
+      """

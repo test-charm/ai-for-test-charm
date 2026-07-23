@@ -20,8 +20,13 @@ REQ_HASH="$(sha256sum "$REQ_FILE" | awk '{print $1}')"
 if ! command -v rg >/dev/null 2>&1; then
   log_info "Installing OS dependencies"
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update
-  apt-get install -y --no-install-recommends ripgrep
+  for i in 1 2 3; do
+    if apt-get update && apt-get install -y --no-install-recommends ripgrep; then
+      break
+    fi
+    log_warn "apt-get attempt $i failed, retrying in 3s..."
+    sleep 3
+  done
   rm -rf /var/lib/apt/lists/*
 else
   log_info "OS dependencies already available"
