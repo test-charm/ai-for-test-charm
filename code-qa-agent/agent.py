@@ -47,23 +47,20 @@ def _preview_text(text: str, limit: int = 200) -> str:
 def _response_text(content: Any) -> str:
     if isinstance(content, str):
         return content
-    if content is None:
-        return ""
-    if isinstance(content, list):
-        chunks: list[str] = []
-        for block in content:
-            if isinstance(block, str):
-                chunks.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    chunks.append(text)
-            else:
-                text = getattr(block, "text", None)
-                if isinstance(text, str):
-                    chunks.append(text)
-        return "".join(chunks)
-    return str(content)
+    # content is a list of content blocks (Anthropic format)
+    chunks: list[str] = []
+    for block in content:
+        if isinstance(block, str):
+            chunks.append(block)
+        elif isinstance(block, dict) and block.get("type") == "text":
+            text = block.get("text")
+            if isinstance(text, str):
+                chunks.append(text)
+        else:
+            text = getattr(block, "text", None)
+            if isinstance(text, str):
+                chunks.append(text)
+    return "".join(chunks)
 
 
 def _looks_like_incomplete_response(text: str) -> bool:

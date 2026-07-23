@@ -772,3 +772,53 @@
         }
       }]
       """
+
+  @anthropic-provider
+  场景: Anthropic响应包含多个内容块时文本被正确拼接
+    假如Mock API:
+      """
+      POST: '/v1/messages'
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "tool_use",
+                  "name": "list_directory",
+                  "input": {"path": "."}
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "前半部分"
+                },
+                {
+                  "type": "text",
+                  "text": "后半部分"
+                }
+              ]
+            }
+            ```
+      """
+    当用户发送消息"hello multi-block"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       前半部分后半部分
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
