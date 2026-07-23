@@ -155,25 +155,30 @@ cd e2e-tests
 
 # 默认模型（mock-gpt），tool_choice=required
 docker compose --profile default up -d
-./gradlew cucumber -Ptags='not @deepseek-model'
+./gradlew cucumber -Ptags='not @deepseek-model and not @anthropic-provider'
 
 # DeepSeek 模型（mock-deepseek-chat），tool_choice=auto
 docker compose --profile default down
 docker compose --profile deepseek up -d
 ./gradlew cucumber -Ptags='@deepseek-model'
+
+# Anthropic 提供者（mock-claude），tool_choice=any
+docker compose --profile deepseek down
+docker compose --profile anthropic up -d
+./gradlew cucumber -Ptags='@anthropic-provider'
 ```
 
 `docker-compose.yml` 使用 **Docker Compose Profile** 切换被测模型：
 
 ```
-┌─ profile: default ─────────────┬─ profile: deepseek ────────────────┐
-│ code-qa-agent (18000:8000)      │ code-qa-agent-deepseek (18000)     │
-│ CQA_LLM_MODEL: mock-gpt         │ CQA_LLM_MODEL: mock-deepseek-chat  │
-│ tool_choice 首轮: required      │ tool_choice 首轮: auto             │
-└─────────────────────────────────┴────────────────────────────────────┘
+┌─ profile: default ─────────────┬─ profile: deepseek ────────────────┬─ profile: anthropic ───────────┐
+│ code-qa-agent (18000:8000)      │ code-qa-agent-deepseek (18000)     │ code-qa-agent-anthropic (18000)│
+│ CQA_LLM_MODEL: mock-gpt         │ CQA_LLM_MODEL: mock-deepseek-chat  │ CQA_LLM_PROVIDER: anthropic    │
+│ tool_choice 首轮: required      │ tool_choice 首轮: auto             │ tool_choice 首轮: any             │
+└─────────────────────────────────┴────────────────────────────────────┴────────────────────────────────┘
 ```
 
-两服务共享端口，不可同时运行。`chat_api.feature` 中 `@deepseek-model` tag 标记需 deepseek profile 的场景。
+三服务共享端口，不可同时运行。`chat_api.feature` 中 `@deepseek-model` 和 `@anthropic-provider` tag 标记需对应 profile 的场景。
 
 #### 收集覆盖率
 
@@ -191,7 +196,12 @@ docker compose --profile default down
 docker compose --profile deepseek up -d
 ./gradlew cucumber -Ptags='@deepseek-model'
 
-# 3. 合并所有覆盖率数据
+# 3. Anthropic 提供者测试
+docker compose --profile deepseek down
+docker compose --profile anthropic up -d
+./gradlew cucumber -Ptags='@anthropic-provider'
+
+# 4. 合并所有覆盖率数据
 ./collect-coverage.sh          # 自动合并 coverage-output/ 下所有 .coverage-* 文件
 open coverage-output/html/index.html
 ```

@@ -130,11 +130,14 @@ def _execute_tool(name: str, args: dict) -> str:
 
 def _create_llm():
     if settings.llm_provider == "anthropic":
-        return ChatAnthropic(
+        kwargs: dict[str, Any] = dict(
             model=settings.llm_model,
             api_key=settings.llm_api_key,
             max_tokens=8192,
         )
+        if settings.llm_base_url:
+            kwargs["base_url"] = settings.llm_base_url
+        return ChatAnthropic(**kwargs)
     kwargs = dict(model=settings.llm_model, api_key=settings.llm_api_key)
     if settings.llm_base_url:
         kwargs["base_url"] = settings.llm_base_url

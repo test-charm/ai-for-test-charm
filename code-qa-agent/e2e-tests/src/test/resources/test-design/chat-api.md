@@ -44,7 +44,7 @@
 | openai | 否 | "required" |
 | openai | 是 | "auto" |
 
-> e2e 通过 `@deepseek-model` tag + Docker Compose `deepseek` profile 覆盖 DeepSeek 路径。见场景「DeepSeek模型首轮tool_choice为auto」。
+> e2e 通过 Docker Compose Profile 覆盖所有三条分支：`default`（required）、`deepseek`（auto）、`anthropic`（any）。
 
 ### `_looks_like_incomplete_response()` 检测关键词
 
@@ -123,6 +123,7 @@
 | 模型返回规划文本后触发重试 | 非空字符串 | UUID v4 | tool_calls → 规划文本(let me check) → 最终回答 | 3 | required → null → null |
 | 模型连续多次工具调用 | 非空字符串 | UUID v4 | tool_calls(列出目录) → tool_calls(读取文件) → 最终回答 | 3 | required → null → null |
 | DeepSeek模型首轮tool_choice为auto | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | auto → null |
+| Anthropic提供者首轮tool_choice为any | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | any → null |
 
 ## 覆盖性检查
 
@@ -135,6 +136,7 @@
    - agent 连续多轮工具调用路径（`agent.py:293-321`）。 ✅ 新增
    - `_looks_like_incomplete_response()` 函数。 ✅ 新增
    - DeepSeek 模型 `tool_choice=auto` 路径（`agent.py:35-36`）。 ✅ 新增
+   - Anthropic 提供者 `tool_choice=any` 路径（`agent.py:33-34`）。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。

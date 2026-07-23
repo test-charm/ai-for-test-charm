@@ -714,3 +714,61 @@
         | auto                  | mock-deepseek-chat     |
         | null                  | mock-deepseek-chat     |
       """
+
+  @anthropic-provider
+  场景: Anthropic提供者首轮tool_choice为any
+    假如Mock API:
+      """
+      POST: '/v1/messages'
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "tool_use",
+                  "name": "list_directory",
+                  "input": {"path": "."}
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "这是anthropic模型的mock回复。"
+                }
+              ]
+            }
+            ```
+      """
+    当用户发送消息"hello anthropic"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是anthropic模型的mock回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/messages' } : [{
+        body.json: {
+          tool_choice.type: any
+        }
+      } {
+        body.json: {
+          tool_choice: null
+        }
+      }]
+      """

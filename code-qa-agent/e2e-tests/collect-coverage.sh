@@ -33,7 +33,7 @@ COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 
 # Find any running code-qa-agent container (default or deepseek profile)
 CONTAINER_NAME=""
-for name in "code-qa-agent-e2e-code-qa-agent-1" "code-qa-agent-e2e-code-qa-agent-deepseek-1"; do
+for name in "code-qa-agent-e2e-code-qa-agent-1" "code-qa-agent-e2e-code-qa-agent-deepseek-1" "code-qa-agent-e2e-code-qa-agent-anthropic-1"; do
   if docker inspect "$name" --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
     CONTAINER_NAME="$name"
     break
