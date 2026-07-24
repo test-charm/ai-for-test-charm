@@ -12,6 +12,10 @@ log_warn() {
   printf '%b %s\n' "$WARN" "$*"
 }
 
+# ── 国内镜像源 ──
+PIP_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
+APT_MIRROR="http://mirrors.tuna.tsinghua.edu.cn/debian"
+
 VENV_DIR="${VENV_DIR:-/opt/venv}"
 REQ_FILE="${REQ_FILE:-/app/requirements.txt}"
 STAMP_FILE="$VENV_DIR/.requirements.sha256"
@@ -20,6 +24,18 @@ REQ_HASH="$(sha256sum "$REQ_FILE" | awk '{print $1}')"
 if ! command -v rg >/dev/null 2>&1; then
   log_info "Installing OS dependencies"
   export DEBIAN_FRONTEND=noninteractive
+
+  # 切换到国内 apt 镜像
+  if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+    # Debian 12+ 新格式
+    sed -i "s|http://deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources
+    sed -i "s|http://security.debian.org|${APT_MIRROR}-security|g" /etc/apt/sources.list.d/debian.sources
+  elif [ -f /etc/apt/sources.list ]; then
+    # 旧格式
+    sed -i "s|http://deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list
+    sed -i "s|http://security.debian.org|${APT_MIRROR}-security|g" /etc/apt/sources.list
+  fi
+
   for i in 1 2 3; do
     if apt-get update && apt-get install -y --no-install-recommends ripgrep; then
       break
@@ -41,8 +57,8 @@ fi
 
 if [ ! -f "$STAMP_FILE" ] || [ "$(cat "$STAMP_FILE")" != "$REQ_HASH" ]; then
   log_info "Installing Python dependencies"
-  pip install --no-cache-dir --upgrade pip
-  pip install --no-cache-dir -r "$REQ_FILE" watchfiles
+  pip install --no-cache-dir --upgrade pip -i "$PIP_INDEX"
+  pip install --no-cache-dir -i "$PIP_INDEX" -r "$REQ_FILE"
   printf '%s' "$REQ_HASH" > "$STAMP_FILE"
 else
   log_warn "Python dependencies already match requirements.txt"
