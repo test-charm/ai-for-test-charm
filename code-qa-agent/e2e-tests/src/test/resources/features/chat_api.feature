@@ -779,32 +779,15 @@
       """
       POST: '/v1/messages'
       ---
-      body: ```
-            {
-              "content": [
-                {
-                  "type": "tool_use",
-                  "name": "list_directory",
-                  "input": {"path": "."}
-                }
-              ]
-            }
-            ```
+      body(LlmResponseFromA): {
+        content(ListDirectoryFromA[]): [{ ... }]
+      }
       ---
-      body: ```
-            {
-              "content": [
-                {
-                  "type": "text",
-                  "text": "前半部分"
-                },
-                {
-                  "type": "text",
-                  "text": "后半部分"
-                }
-              ]
-            }
-            ```
+      body(LlmResponseFromA): {
+        content: | type | text    |
+                 | text | 前半部分 |
+                 | text | 后半部分 |
+      }
       """
     当用户发送消息"hello multi-block"
     那么收到的 Socket.IO 事件应满足:

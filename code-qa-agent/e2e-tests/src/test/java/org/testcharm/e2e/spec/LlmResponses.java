@@ -52,4 +52,33 @@ public class LlmResponses {
             property("arguments").defaultValue("{\"file_path\":\"app.py\"}");
         }
     }
+
+    public static class LlmResponseFromA extends Spec<org.testcharm.e2e.dto.LlmResponseFromA> {
+        @Override
+        public void main() {
+            property("content[]").apply("Content");
+        }
+    }
+
+    public static class Content extends Spec<org.testcharm.e2e.dto.LlmResponseFromA.Content> {
+    }
+
+    public static class ListDirectoryFromA extends Content {
+        @Override
+        public void main() {
+            property("type").defaultValue("tool_use");
+            property("name").defaultValue("list_directory");
+            property("input").is("ListDirectoryInput");
+        }
+    }
+
+    public static class Input extends Spec<org.testcharm.e2e.dto.LlmResponseFromA.Content.Input> {
+    }
+
+    public static class ListDirectoryInput extends Input {
+        @Override
+        public void main() {
+            property("path").defaultValue(".");
+        }
+    }
 }
