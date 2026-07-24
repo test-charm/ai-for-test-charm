@@ -96,14 +96,20 @@ public class SocketIOClient {
         }
     }
 
+    private final Object httpLock = new Object();
+
     private String httpGet(String path) {
-        restfulStep.get(path);
-        return restfulStep.response("body.string");
+        synchronized (httpLock) {
+            restfulStep.get(path);
+            return restfulStep.response("body.string");
+        }
     }
 
     private String httpPost(String path, String body) throws IOException {
-        restfulStep.post(path, "text/plain", body);
-        return restfulStep.response("body.string");
+        synchronized (httpLock) {
+            restfulStep.post(path, "text/plain", body);
+            return restfulStep.response("body.string");
+        }
     }
 
     private void processMessages(String text) {
@@ -201,11 +207,19 @@ public class SocketIOClient {
                 arr.put(item);
             }
         }
-        try {
-            httpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to emit event: " + event, e);
+        IOException lastEx = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                httpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
+                return;
+            } catch (IOException e) {
+                lastEx = e;
+                if (attempt < 2) {
+                    try { Thread.sleep(200L * (attempt + 1)); } catch (InterruptedException ignored) {}
+                }
+            }
         }
+        throw new RuntimeException("Failed to emit event: " + event, lastEx);
     }
 
     public void clear() {

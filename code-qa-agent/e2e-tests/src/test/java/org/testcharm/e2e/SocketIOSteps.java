@@ -10,7 +10,6 @@ import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static org.testcharm.dal.Assertions.expect;
@@ -125,7 +124,6 @@ public class SocketIOSteps {
                     "userEnv": "{}"
                   }
                 """);
-        TimeUnit.MILLISECONDS.sleep(500);
         emitEvent("connection_successful");
         emitEventWithData("client_message", """
                   {
