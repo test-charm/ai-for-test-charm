@@ -1,5 +1,5 @@
 #!/bin/sh
-set -eu
+set -euo pipefail
 
 # ─── 颜色 ───
 GREEN='\033[1;32m'
@@ -32,7 +32,6 @@ if [ -d "$COVERAGE_DIR" ]; then
 fi
 
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-FAILED_PROFILES=""
 
 run_profile() {
   profile="$1"
@@ -55,8 +54,8 @@ run_profile() {
   if ./gradlew cucumber -Ptags="$tags" 2>&1 | sed 's/^/  /'; then
     log_ok "$profile tests passed"
   else
-    log_fail "$profile tests failed"
-    FAILED_PROFILES="$FAILED_PROFILES $profile"
+    log_fail "$profile tests failed — exiting"
+    exit 1
   fi
   echo
 }
@@ -90,9 +89,4 @@ docker compose --profile default --profile deepseek --profile anthropic down --r
 
 # ─── 6. summary ───
 echo
-if [ -z "$FAILED_PROFILES" ]; then
-  log_ok "All profiles passed!"
-else
-  log_fail "Failed profiles:$FAILED_PROFILES"
-  exit 1
-fi
+log_ok "All profiles passed!"
