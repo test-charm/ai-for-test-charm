@@ -136,4 +136,19 @@ public class SocketIOSteps {
                   }
                 """.formatted(message));
     }
+
+    @SneakyThrows
+    @当("用户继续发送消息{string}")
+    public void 用户继续发送消息(String message) {
+        emitEventWithData("client_message", """
+                  {
+                    "message": {
+                      "id": "${message-id}",
+                      "createdAt": "2026-07-09T00:00:01.000Z",
+                      "output": "%s",
+                      "name": "joseph"
+                    }
+                  }
+                """.formatted(message));
+    }
 }

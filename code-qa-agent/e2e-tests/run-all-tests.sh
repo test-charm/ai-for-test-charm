@@ -69,17 +69,17 @@ run_profile "anthropic" \
   "@anthropic-provider" \
   "mock-claude / tool_choice=any"
 
-# ─── 4. stop all containers ───
-log_info "Stopping all containers..."
-docker compose --profile default --profile deepseek --profile anthropic down --remove-orphans 2>/dev/null || true
-
-# ─── 5. collect coverage ───
+# ─── 4. collect coverage ───
 log_section "Collecting Coverage"
 if [ -x "$SCRIPT_DIR/collect-coverage.sh" ]; then
   "$SCRIPT_DIR/collect-coverage.sh"
 else
   log_fail "collect-coverage.sh not found or not executable"
 fi
+
+# ─── 5. stop all containers ───
+log_info "Stopping all containers..."
+docker compose --profile default --profile deepseek --profile anthropic down --remove-orphans 2>/dev/null || true
 
 # ─── 6. summary ───
 echo

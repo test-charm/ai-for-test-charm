@@ -48,16 +48,13 @@ def _response_text(content: Any) -> str:
     if isinstance(content, str):
         return content
     # content is a list of content blocks (Anthropic format)
+    # LangChain always returns dicts, not raw ContentBlock objects
     chunks: list[str] = []
     for block in content:
         if isinstance(block, str):
             chunks.append(block)
         elif isinstance(block, dict) and block.get("type") == "text":
             text = block.get("text")
-            if isinstance(text, str):
-                chunks.append(text)
-        else:
-            text = getattr(block, "text", None)
             if isinstance(text, str):
                 chunks.append(text)
     return "".join(chunks)

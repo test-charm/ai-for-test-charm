@@ -21,6 +21,7 @@ if _coverage_data_file:
     def _save_coverage():
         _cov.stop()
         _cov.save()
+        _cov.start()
     _atexit.register(_save_coverage)
     for _sig in (_signal.SIGTERM, _signal.SIGINT):
         _signal.signal(_sig, lambda signum, frame, s=_sig: (

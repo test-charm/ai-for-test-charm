@@ -667,6 +667,78 @@
       }]
       """
 
+  场景: 同一会话中继续提问能维护对话上下文
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第一轮回复。'
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第二轮回复，基于对话上下文的回答。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"first question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       第一轮回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    当用户继续发送消息"second question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       第二轮回复，基于对话上下文的回答。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.tool_choice |
+        | required              |
+        | null                  |
+        | null                  |
+      """
+
   @deepseek-model
   场景: DeepSeek模型首轮tool_choice为auto
     假如Mock API:
