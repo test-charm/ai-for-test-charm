@@ -672,55 +672,31 @@
       """
       POST: '/v1/chat/completions'
       ---
-      body: ```
-            {
-              "created": 1752050400,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "tool_calls": [
-                      {
-                        "id": "call_1",
-                        "function": {
-                          "name": "list_directory",
-                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050401,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "第一轮回复。"
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第一轮回复。'
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050402,
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "第二轮回复，基于对话上下文的回答。"
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第二轮回复，基于对话上下文的回答。'
+          }
+        }]
+      }
       """
     当用户发送消息"first question"
     那么收到的 Socket.IO 事件应满足:

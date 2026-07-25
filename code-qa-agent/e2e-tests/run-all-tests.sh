@@ -24,6 +24,13 @@ log_section() {
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 清理遗留覆盖率数据，避免跨次运行干扰
+COVERAGE_DIR="$SCRIPT_DIR/coverage-output"
+if [ -d "$COVERAGE_DIR" ]; then
+  find "$COVERAGE_DIR" -maxdepth 1 -name '.coverage-*' -type f -delete 2>/dev/null || true
+  log_info "Cleaned old coverage data from $COVERAGE_DIR"
+fi
+
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 FAILED_PROFILES=""
 
