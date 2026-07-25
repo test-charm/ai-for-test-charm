@@ -164,10 +164,8 @@ class CodeQAAgent:
             self.conversations[thread_id] = [
                 SystemMessage(content=system_prompt),
             ]
-        elif self.conversations[thread_id] and isinstance(self.conversations[thread_id][0], SystemMessage):
-            self.conversations[thread_id][0] = SystemMessage(content=system_prompt)
         else:
-            self.conversations[thread_id].insert(0, SystemMessage(content=system_prompt))
+            self.conversations[thread_id][0] = SystemMessage(content=system_prompt)
         return self.conversations[thread_id]
 
     @staticmethod
