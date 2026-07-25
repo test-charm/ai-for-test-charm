@@ -17,6 +17,8 @@ public class LlmResponse {
     @Getter
     @Setter
     public static class Choice {
+        @JsonProperty("finish_reason")
+        private String finishReason;
         private Message message;
 
         @Getter

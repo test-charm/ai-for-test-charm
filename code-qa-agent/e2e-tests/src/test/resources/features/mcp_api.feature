@@ -8,22 +8,23 @@
       ---
       body(LlmResponse): {
         choices: [{
-          message: {
-            toolCalls!: [{
-              function(ListDirectory): { ... }
-            }]
-          }
-        }]
-      }
-      ---
-      body(LlmResponse): {
-        choices: [{
-          message: {
-            content: '这是通过MCP工具返回的回答。代码入口在app.py中。'
-          }
-        }]
-      }
-      """
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         message: {
+           content: '这是通过MCP工具返回的回答。代码入口在app.py中。'
+         }
+       }]
+     }
+     """
     当向MCP服务发送问题"what is the entry point"
     那么MCP回答应为:
       """
@@ -45,22 +46,23 @@
       ---
       body(LlmResponse): {
         choices: [{
-          message: {
-            toolCalls!: [{
-              function(ListDirectory): { ... }
-            }]
-          }
-        }]
-      }
-      ---
-      body(LlmResponse): {
-        choices: [{
-          message: {
-            content: '重试后返回的回答。'
-          }
-        }]
-      }
-      """
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         message: {
+           content: '重试后返回的回答。'
+         }
+       }]
+     }
+     """
     当向MCP服务发送问题"retry question"
     那么MCP回答应为:
       """

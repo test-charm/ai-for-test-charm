@@ -15,6 +15,7 @@ public class LlmResponses {
     public static class Choice extends Spec<org.testcharm.e2e.dto.LlmResponse.Choice> {
         @Override
         public void main() {
+            property("finishReason").defaultValue("stop");
             property("message").apply("Message");
         }
     }

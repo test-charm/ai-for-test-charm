@@ -12,6 +12,7 @@
               "created": 1752050400,
               "choices": [
                 {
+                  "finish_reason": "tool_calls",
                   "message": {
                     "role": "assistant",
                     "tool_calls": [
@@ -34,6 +35,7 @@
               "created": 1752050401,
               "choices": [
                 {
+                  "finish_reason": "stop",
                   "message": {
                     "role": "assistant",
                     "content": "这是一个mock回复。"
@@ -500,20 +502,21 @@
       ---
       body(LlmResponse): {
         choices: [{
-          message: {
-            toolCalls!: [{
-              function(ListDirectory): { ... }
-            }]
-          }
-        }]
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
       }
       ---
       body(LlmResponse): {
-        choices: [{
-          message: {
-            content: "这是一个重试后使用工具得到的回复。"
-          }
-        }]
+       choices: [{
+         message: {
+           content: "这是一个重试后使用工具得到的回复。"
+         }
+       }]
       }
       """
     当用户发送消息"hello retry"
@@ -548,6 +551,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ListDirectory): { ... }
@@ -604,6 +608,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ListDirectory): { ... }
@@ -614,6 +619,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ReadFile): {
@@ -674,6 +680,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ListDirectory): { ... }
@@ -747,6 +754,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ListDirectory): { ... }
@@ -885,6 +893,7 @@
        ---
        body(LlmResponse): {
          choices: [{
+           finishReason: 'tool_calls'
            message: {
              toolCalls!: [{
                function: {
@@ -935,6 +944,7 @@
        ---
        body(LlmResponse): {
          choices: [{
+           finishReason: 'tool_calls'
            message: {
              toolCalls!: [{
                function(ListDirectory): { arguments: '{"path": "../etc", "max_depth": 1}' }
@@ -982,6 +992,7 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
           message: {
             toolCalls!: [{
               function(ListDirectory): { ... }
