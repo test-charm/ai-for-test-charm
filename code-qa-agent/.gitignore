@@ -17,3 +17,4 @@ build/
 
 # e2e coverage output
 e2e-tests/coverage-output/
+.coverage
