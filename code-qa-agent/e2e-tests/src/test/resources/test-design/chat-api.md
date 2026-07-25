@@ -149,6 +149,8 @@
 | DeepSeek模型首轮tool_choice为auto | deepseek | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | auto → null |
 | Anthropic提供者首轮tool_choice为any | anthropic | 非空字符串 | UUID v4 | tool_calls → 最终回答 | 2 | any → null |
 | Anthropic多内容块文本拼接 | anthropic | 非空字符串 | UUID v4 | tool_calls → 多 text block 回答 | 2 | any → null |
+| 调用未知工具时返回错误信息并继续 | default | 非空字符串 | UUID v4 | tool_calls(unknown) → 最终回答 | 2 | required → null |
+| 工具执行异常时返回错误信息并继续 | default | 非空字符串 | UUID v4 | tool_calls(../etc) → 最终回答 | 2 | required → null |
 
 ## 覆盖性检查
 
@@ -164,11 +166,15 @@
    - Anthropic 提供者 `tool_choice=any` 路径。 ✅
    - 多轮对话复用会话（`agent.py:167-168` else 分支，`agent.py:202` 非首轮 HumanMessage）。 ✅ 新增
    - Anthropic 多内容块 `_response_text()` 路径（`agent.py:56-59` dict + type=="text" 分支）。 ✅ 新增
+   - agent `_execute_tool` 未知工具名分支（`agent.py:116-117`）。 ✅ 新增
+   - agent `_execute_tool` 工具执行异常分支（`agent.py:121-122`）。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。
    - LLM mock 的所有等价类均覆盖。
    - Anthropic 响应的单 block / 多 block 均覆盖。
+   - 非法工具名（`NonExistentTool`）等价类。 ✅ 新增
+   - 工具参数触发运行时异常（path traversal）等价类。 ✅ 新增
 3. 条件分支覆盖：
    - 登录回调 `username.strip()` 为假 / 为真。
    - `uuid.UUID(step_dict["id"]).version == 4` 为假 / 为真。
@@ -179,10 +185,11 @@
    - `thread_id not in conversations` 为真 / 为假（`agent.py:163-168`）。 ✅ 新增
    - `len(messages) == 1` 为真 / 为假（`agent.py:193-202`）。 ✅ 新增
    - `isinstance(block, str)` 为假 + dict `type=="text"` 分支（`agent.py:56-59`）。 ✅ 新增
+   - `TOOLS_MAP.get(name)` 返回 `None` / 返回有效函数（`agent.py:115-117`）。 ✅ 新增
+   - `fn.invoke(args)` 正常返回 / 抛异常（`agent.py:118-122`）。 ✅ 新增
 4. 已知缺口：
    - `MAX_ITERATIONS` 达到上限路径（`agent.py:318-320`）：需 200 轮循环，不具实用性。
    - `isinstance(block, str)` 为真的分支（`agent.py:54-55`）：当前 mock 返回 dict 格式，未触发原始字符串路径。
-   - `_execute_tool` 未知工具名 + 执行异常（`agent.py:117`, `agent.py:121-122`）：需构造非法工具名或触发工具运行时异常。
    - `load_system_prompt` 文件不存在 / 为空（`agent.py:104-105`, `agent.py:108`）：边界 case。
    - `_looks_like_incomplete_response` 空文本（`agent.py:65-66`）：边界 case。
    - `finish_reason`/`stop_reason` 元数据存在（`agent.py:95-96`）：mock 未产出这些字段。

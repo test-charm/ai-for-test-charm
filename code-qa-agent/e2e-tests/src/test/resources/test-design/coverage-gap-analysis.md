@@ -28,23 +28,23 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 
 | 行号 | 代码 | 覆盖场景 |
 |------|------|----------|
-| **L167-168** | `else` 分支：已有 thread_id 时复用会话（`conversations[thread_id][0] = SystemMessage(...)`） | "同一会话中继续提问能维护对话上下文" |
-| **L202** | `messages.append(HumanMessage(content=user_input))` 非首轮路径 | 同上 |
+| **L167-168** | `else` 分支：已有 thread_id 时复用会话 | "同一会话中继续提问能维护对话上下文" |
+| **L202** | `messages.append(HumanMessage(...))` 非首轮路径 | 同上 |
 | **L56-59** | `isinstance(block, dict) and block.get("type") == "text"` | "Anthropic响应包含多个内容块时文本被正确拼接" |
+| **L116-117** | `if not fn: return f"Unknown tool: {name}"` | "调用未知工具时返回错误信息并继续" |
+| **L121-122** | `except Exception as e: return f"Tool error ({name}): {e}"` | "工具执行异常时返回错误信息并继续" |
 
 ### 🔴 仍待补测
 
 | 行号 | 代码 | 说明 |
 |------|------|------|
-| **L54-55** | `isinstance(block, str)` 分支 | Anthropic 场景返回 dict 格式，纯字符串 content block 未触发。需 mock 返回 `str` 类型 content |
-| **L65-66** | `_looks_like_incomplete_response` 空文本 | 边界 case，传入空字符串时返回 False |
+| **L54-55** | `isinstance(block, str)` 分支 | Anthropic 场景返回 dict 格式，纯字符串 content block 未触发 |
+| **L65-66** | `_looks_like_incomplete_response` 空文本 | 边界 case |
 | **L95-96** | `finish_reason`/`stop_reason` 元数据存在 | mock LLM 返回的 metadata 不包含这些字段 |
-| **L104-105** | `load_system_prompt` 文件不存在 | 边界 case，system prompt 文件缺失时抛 RuntimeError |
+| **L104-105** | `load_system_prompt` 文件不存在 | 边界 case |
 | **L108** | `load_system_prompt` 文件为空 | 同上 |
-| **L117** | `_execute_tool` 未知工具名 | 传入不存在工具名时返回错误信息 |
-| **L121-122** | `_execute_tool` 工具执行异常 | 工具运行时抛出异常时的错误处理 |
-| **L318-320** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 正常 query 都在 200 轮内完成，需 mock LLM 无限返回 tool_calls 才能触发 |
-| **L326** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None`（自动生成 UUID）分支 |
+| **L318-320** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 需 mock LLM 无限返回 tool_calls |
+| **L326** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
 ### 🟡 其他 profile 未覆盖（非死代码）
 
@@ -152,10 +152,11 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 
 ## 🎯 优先级建议
 
-1. ~~**agent.py 多轮对话**（L167-168, L202）~~ ✅ 已完成 — "同一会话中继续提问能维护对话上下文"
-2. ~~**Anthropic 多内容块拼接**（L56-59）~~ ✅ 已完成 — "Anthropic响应包含多个内容块时文本被正确拼接"
-3. **app.py 密码错误**（L53-54）— 安全相关，需添加 `CQA_AUTH_PASSWORD` 配置
-4. **app.py 会话恢复**（L68-70）— 功能完整性，需模拟 WebSocket 重连场景
-5. **agent.py 边界条件**（工具异常 L121-122、文件缺失 L104-108、空文本 L65-66）— 错误处理健壮性
-6. **agent.py MAX_ITERATIONS**（L318-320）— 边缘路径，价值较低
-7. **mcp_server.py `main()`**（L102-116）— CLI 入口，可标记 `# pragma: no cover`
+1. ~~**agent.py 多轮对话**（L167-168, L202）~~ ✅ 已完成
+2. ~~**Anthropic 多内容块拼接**（L56-59）~~ ✅ 已完成
+3. ~~**agent.py `_execute_tool` 错误处理**（L116-117, L121-122）~~ ✅ 已完成
+4. **app.py 密码错误**（L53-54）— 安全相关，需添加 `CQA_AUTH_PASSWORD` 配置
+5. **app.py 会话恢复**（L68-70）— 功能完整性，需模拟 WebSocket 重连场景
+6. **agent.py 边界条件**（`isinstance(block, str)` L54-55、空文本 L65-66、文件缺失 L104-108）— 错误处理健壮性
+7. **agent.py MAX_ITERATIONS**（L318-320）— 边缘路径，价值较低
+8. **mcp_server.py `main()`**（L102-116）— CLI 入口，可标记 `# pragma: no cover`

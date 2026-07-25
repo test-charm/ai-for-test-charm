@@ -877,3 +877,100 @@
         } ... ]
       }
       """
+
+  场景: 调用未知工具时返回错误信息并继续
+     假如Mock API:
+       """
+       POST: '/v1/chat/completions'
+       ---
+       body(LlmResponse): {
+         choices: [{
+           message: {
+             toolCalls!: [{
+               function: {
+                 name: non_existent_tool
+                 arguments: '{}'
+               }
+             }]
+           }
+         }]
+       }
+       ---
+       body(LlmResponse): {
+         choices: [{
+           message: {
+             content: '无法使用该工具，但我会基于现有知识回答。'
+           }
+         }]
+       }
+       """
+     当用户发送消息"hello unknown tool"
+     那么收到的 Socket.IO 事件应满足:
+       """
+       ::eventually: {
+         receivedEvents::filter: {
+           name= new_message
+         } : [ ... {
+           data.output= ```
+                        无法使用该工具，但我会基于现有知识回答。
+
+                        ---
+                        ⏱️ 耗时 0秒
+                        ```
+         } ... ]
+       }
+       """
+     并且数据应为:
+       """
+       MockApi::filter: { POST: '/v1/chat/completions' } :
+         | body.json.tool_choice |
+         | required              |
+         | null                  |
+       """
+
+  场景: 工具执行异常时返回错误信息并继续
+     假如Mock API:
+       """
+       POST: '/v1/chat/completions'
+       ---
+       body(LlmResponse): {
+         choices: [{
+           message: {
+             toolCalls!: [{
+               function(ListDirectory): { arguments: '{"path": "../etc", "max_depth": 1}' }
+             }]
+           }
+         }]
+       }
+       ---
+       body(LlmResponse): {
+         choices: [{
+           message: {
+             content: '工具执行出错，但我会继续回答。'
+           }
+         }]
+       }
+       """
+     当用户发送消息"hello tool error"
+     那么收到的 Socket.IO 事件应满足:
+       """
+       ::eventually: {
+         receivedEvents::filter: {
+           name= new_message
+         } : [ ... {
+           data.output= ```
+                        工具执行出错，但我会继续回答。
+
+                        ---
+                        ⏱️ 耗时 0秒
+                        ```
+         } ... ]
+       }
+       """
+     并且数据应为:
+       """
+       MockApi::filter: { POST: '/v1/chat/completions' } :
+         | body.json.tool_choice |
+         | required              |
+         | null                  |
+       """
