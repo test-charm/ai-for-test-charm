@@ -45,6 +45,7 @@ public class ApplicationSteps {
         restfulStep.setJFactory(jFactory);
         PathVariableReplacement.reset();
         PathVariableReplacement.replacements.put("session-id", UUID.randomUUID().toString());
+        PathVariableReplacement.replacements.put("resume-session-id", UUID.randomUUID().toString());
         PathVariableReplacement.replacements.put("message-id", UUID.randomUUID().toString());
         clearDatabase();
     }

@@ -10,7 +10,6 @@ import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 
 import java.util.*;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static org.testcharm.dal.Assertions.expect;
@@ -18,6 +17,7 @@ import static org.testcharm.dal.Assertions.expect;
 public class SocketIOSteps {
 
     private static final Pattern THREAD_ID_PATTERN = Pattern.compile("\"thread_id\":\"([^\"]+)\"");
+    private static final Pattern THREAD_ID_CAMEL_PATTERN = Pattern.compile("threadId=([a-f0-9\\-]+)");
 
     @Autowired
     private SocketIOClient client;
@@ -79,6 +79,11 @@ public class SocketIOSteps {
         expect(client).should(dalExpression);
     }
 
+    @当("断开 Socket.IO 连接")
+    public void disconnectSocketIO() {
+        client.clear();
+    }
+
     @After(order = 999)
     public void disconnect() {
         if (client != null) {
@@ -89,6 +94,11 @@ public class SocketIOSteps {
 
     private void extractThreadId(String text) {
         var matcher = THREAD_ID_PATTERN.matcher(text);
+        if (matcher.find()) {
+            PathVariableReplacement.replacements.put("thread-id", matcher.group(1));
+            return;
+        }
+        matcher = THREAD_ID_CAMEL_PATTERN.matcher(text);
         if (matcher.find()) {
             PathVariableReplacement.replacements.put("thread-id", matcher.group(1));
         }
@@ -147,6 +157,21 @@ public class SocketIOSteps {
                     "message": {
                       "id": "${message-id}",
                       "createdAt": "2026-07-09T00:00:01.000Z",
+                      "output": "%s",
+                      "name": "joseph"
+                    }
+                  }
+                """.formatted(message));
+    }
+
+    @当("仅发送消息{string}")
+    public void 仅发送消息(String message) {
+        emitEvent("connection_successful");
+        emitEventWithData("client_message", """
+                  {
+                    "message": {
+                      "id": "${message-id}",
+                      "createdAt": "2026-07-09T00:00:00.000Z",
                       "output": "%s",
                       "name": "joseph"
                     }

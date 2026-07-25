@@ -746,6 +746,147 @@
         | null                  |
       """
 
+  场景: 断开重连后恢复会话不重新发送欢迎消息
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第一轮回复。'
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '恢复后的回答。'
+          }
+        }]
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "${session-id}",
+        "userEnv": "{}",
+        "threadId": "${resume-session-id}"
+      }
+      """
+    当仅发送消息"first question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       第一轮回复。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    当断开 Socket.IO 连接
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "${resume-session-id}",
+        "userEnv": "{}",
+        "threadId": "${resume-session-id}"
+      }
+      """
+    当仅发送消息"second question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       恢复后的回答。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : {
+        ::size: 3
+      }
+      """
+
+  场景: 长消息触发preview截断 - 仅影响日志，不影响发送给模型的消息
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '收到长消息。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output: ```
+                       收到长消息。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+        body.json: {
+          messages: [ ... {
+            content::should.endsWith: '这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。这是一个测试消息。'
+          }]
+        }
+      } ... ]
+      """
+
   @deepseek-model
   场景: DeepSeek模型首轮tool_choice为auto
     假如Mock API:

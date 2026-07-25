@@ -50,8 +50,6 @@ def get_data_layer():
 
 @cl.password_auth_callback
 async def auth_callback(username: str, password: str) -> cl.User | None:
-    if settings.auth_password and password != settings.auth_password:
-        return None
     if not username.strip():
         return None
     return cl.User(identifier=username.strip(), metadata={"role": "user"})
