@@ -1,5 +1,10 @@
 name: code-qa-agent-e2e
 
+x-e2e-image: &e2e-image
+  build:
+    context: ..
+    dockerfile: e2e-tests/Dockerfile.e2e
+
 services:
   mock-server:
     image: mockserver/mockserver:5.15.0
@@ -27,8 +32,8 @@ services:
     restart: unless-stopped
 
   code-qa-agent:
+    <<: *e2e-image
     profiles: ["default"]
-    image: python:3.12-slim
     init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
@@ -71,8 +76,8 @@ services:
     restart: unless-stopped
 
   code-qa-agent-deepseek:
+    <<: *e2e-image
     profiles: ["deepseek"]
-    image: python:3.12-slim
     init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
@@ -115,8 +120,8 @@ services:
     restart: unless-stopped
 
   code-qa-agent-anthropic:
+    <<: *e2e-image
     profiles: ["anthropic"]
-    image: python:3.12-slim
     init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
@@ -159,8 +164,8 @@ services:
     restart: unless-stopped
 
   mcp-server:
+    <<: *e2e-image
     profiles: ["default"]
-    image: python:3.12-slim
     init: true
     working_dir: /app
     command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-mcp-dev.sh"]
