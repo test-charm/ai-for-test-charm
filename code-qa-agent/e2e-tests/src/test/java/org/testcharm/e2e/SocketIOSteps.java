@@ -10,6 +10,7 @@ import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 
 import java.util.*;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static org.testcharm.dal.Assertions.expect;
@@ -140,6 +141,7 @@ public class SocketIOSteps {
     @SneakyThrows
     @当("用户继续发送消息{string}")
     public void 用户继续发送消息(String message) {
+        PathVariableReplacement.replacements.put("message-id", UUID.randomUUID().toString());
         emitEventWithData("client_message", """
                   {
                     "message": {

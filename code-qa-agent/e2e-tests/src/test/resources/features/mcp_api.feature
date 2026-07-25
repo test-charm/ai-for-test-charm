@@ -9,7 +9,7 @@
       body(LlmResponse): {
         choices: [{
           message: {
-            toolCalls: [{
+            toolCalls!: [{
               function(ListDirectory): { ... }
             }]
           }
