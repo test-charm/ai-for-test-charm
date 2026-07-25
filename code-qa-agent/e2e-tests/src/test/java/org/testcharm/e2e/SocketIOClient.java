@@ -3,11 +3,12 @@ package org.testcharm.e2e;
 import lombok.Getter;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.testcharm.cucumber.restful.RestfulStep;
+import org.testcharm.jfactory.JFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -31,11 +32,19 @@ public class SocketIOClient {
     @Lazy
     private RestfulStep restfulStep;
 
-    public void connect(Map<String, String> auth) throws Exception {
-        resolveScopedProxy();
+    @Autowired
+    @Lazy
+    private JFactory jFactory;
 
+    @Value("${app.base-url}")
+    private String baseUrl;
+
+    /** Dedicated RestfulStep for the poll thread to avoid lock contention with the test thread. */
+    private RestfulStep pollStep;
+
+    public void connect(Map<String, String> auth) throws Exception {
         // Step 1: Engine.IO handshake
-        String handshakeResp = httpGet(wsBasePath);
+        String handshakeResp = testHttpGet(wsBasePath);
 
         // Parse sid from "0{...}"
         if (handshakeResp.startsWith("0")) {
@@ -50,12 +59,15 @@ public class SocketIOClient {
         // Step 2: Send CONNECT packet
         JSONObject authJson = new JSONObject(auth);
         String connectBody = "40" + authJson;
-        String connectResp = httpPost(wsBasePath + "&sid=" + engineSid, connectBody);
+        String connectResp = testHttpPost(wsBasePath + "&sid=" + engineSid, connectBody);
         if (!"OK".equals(connectResp)) {
             throw new RuntimeException("CONNECT failed: " + connectResp);
         }
 
         // Step 3: Start polling for events
+        pollStep = new RestfulStep();
+        pollStep.setBaseUrl(baseUrl);
+        pollStep.setJFactory(jFactory);
         connected = true;
         connectedLatch.countDown();
         running = true;
@@ -68,7 +80,7 @@ public class SocketIOClient {
     private void pollLoop() {
         while (running) {
             try {
-                String resp = httpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
+                String resp = pollHttpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
                 if (resp != null && resp.length() > 1) {
                     processMessages(resp);
                 }
@@ -81,35 +93,28 @@ public class SocketIOClient {
         }
     }
 
-    /**
-     * Force Spring to resolve the cucumber-glue scoped proxy on the current
-     * (Cucumber) thread, then unwrap it so the poll thread can use the actual
-     * RestfulStep instance without needing the scope to be active.
-     */
-    private void resolveScopedProxy() {
-        if (restfulStep instanceof Advised advised) {
-            try {
-                restfulStep = (RestfulStep) advised.getTargetSource().getTarget();
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to resolve RestfulStep scoped proxy", e);
-            }
-        }
+    // ── test-thread HTTP (uses RestfulStep) ──
+
+    private String testHttpGet(String path) {
+        restfulStep.get(path);
+        return restfulStep.response("body.string");
     }
 
-    private final Object httpLock = new Object();
-
-    private String httpGet(String path) {
-        synchronized (httpLock) {
-            restfulStep.get(path);
-            return restfulStep.response("body.string");
-        }
+    private String testHttpPost(String path, String body) throws IOException {
+        restfulStep.post(path, "text/plain", body);
+        return restfulStep.response("body.string");
     }
 
-    private String httpPost(String path, String body) throws IOException {
-        synchronized (httpLock) {
-            restfulStep.post(path, "text/plain", body);
-            return restfulStep.response("body.string");
-        }
+    // ── poll-thread HTTP (uses dedicated RestfulStep) ──
+
+    private String pollHttpGet(String path) {
+        pollStep.get(path);
+        return pollStep.response("body.string");
+    }
+
+    private String pollHttpPost(String path, String body) {
+        pollStep.post(path, "text/plain", body);
+        return pollStep.response("body.string");
     }
 
     private void processMessages(String text) {
@@ -143,8 +148,8 @@ public class SocketIOClient {
                 handleSocketMessage(socketType, payload);
             } else if (engineType == '2') {
                 try {
-                    httpPost(wsBasePath + "&sid=" + engineSid, "3");
-                } catch (IOException ignored) {}
+                    pollHttpPost(wsBasePath + "&sid=" + engineSid, "3");
+                } catch (Exception ignored) {}
             }
         }
     }
@@ -210,7 +215,7 @@ public class SocketIOClient {
         IOException lastEx = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                httpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
+                testHttpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
                 return;
             } catch (IOException e) {
                 lastEx = e;
