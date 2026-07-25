@@ -51,9 +51,7 @@ def _response_text(content: Any) -> str:
     # LangChain always returns dicts, not raw ContentBlock objects
     chunks: list[str] = []
     for block in content:
-        if isinstance(block, str):
-            chunks.append(block)
-        elif isinstance(block, dict) and block.get("type") == "text":
+        if isinstance(block, dict) and block.get("type") == "text":
             text = block.get("text")
             if isinstance(text, str):
                 chunks.append(text)

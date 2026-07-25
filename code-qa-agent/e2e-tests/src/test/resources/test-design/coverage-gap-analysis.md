@@ -38,7 +38,7 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 
 | 行号 | 代码 | 说明 |
 |------|------|------|
-| **L54-55** | `isinstance(block, str)` 分支 | Anthropic 场景返回 dict 格式，纯字符串 content block 未触发 |
+| ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
 | **L65-66** | `_looks_like_incomplete_response` 空文本 | 边界 case |
 | **L95-96** | `finish_reason`/`stop_reason` 元数据存在 | mock LLM 返回的 metadata 不包含这些字段 |
 | **L104-105** | `load_system_prompt` 文件不存在 | 边界 case |
@@ -157,6 +157,6 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 3. ~~**agent.py `_execute_tool` 错误处理**（L116-117, L121-122）~~ ✅ 已完成
 4. **app.py 密码错误**（L53-54）— 安全相关，需添加 `CQA_AUTH_PASSWORD` 配置
 5. **app.py 会话恢复**（L68-70）— 功能完整性，需模拟 WebSocket 重连场景
-6. **agent.py 边界条件**（`isinstance(block, str)` L54-55、空文本 L65-66、文件缺失 L104-108）— 错误处理健壮性
+6. **agent.py 边界条件**（空文本 L65-66、文件缺失 L104-108）— 错误处理健壮性
 7. **agent.py MAX_ITERATIONS**（L318-320）— 边缘路径，价值较低
 8. **mcp_server.py `main()`**（L102-116）— CLI 入口，可标记 `# pragma: no cover`
