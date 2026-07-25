@@ -171,6 +171,7 @@
    - agent `_execute_tool` 未知工具名分支（`agent.py:116-117`）。 ✅ 新增
    - agent `_execute_tool` 工具执行异常分支（`agent.py:121-122`）。 ✅ 新增
    - agent 达到最大迭代次数路径（`agent.py:315-317`，通过 `CQA_MAX_ITERATIONS=3` 控制）。 ✅ 新增
+   - `_looks_like_incomplete_response` 空文本（`agent.py:61-62`）→ `return False`。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。
@@ -193,5 +194,4 @@
    - `finish_reason`/`stop_reason` 元数据存在（`agent.py:94`）：在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段。 ✅ 新增
 4. 已知缺口：
    - `load_system_prompt` 文件不存在/为空：已删除死代码，`system_prompt.md` 随仓库存在。
-   - `_looks_like_incomplete_response` 空文本（`agent.py:65-66`）：边界 case。
    - `llm_base_url` 不存在时的 Anthropic/OpenAI 分支（`agent.py:130`, `agent.py:134`）：当前 profile 设了 base_url。

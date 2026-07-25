@@ -33,7 +33,7 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 | **L56-59** | `isinstance(block, dict) and block.get("type") == "text"` | "Anthropic响应包含多个内容块时文本被正确拼接" |
 | **L116-117** | `if not fn: return f"Unknown tool: {name}"` | "调用未知工具时返回错误信息并继续" |
 | **L121-122** | `except Exception as e: return f"Tool error ({name}): {e}"` | "工具执行异常时返回错误信息并继续" |
-| **L63-64** | `_looks_like_incomplete_response` 空文本 → `return False` | "模型工具调用后返回空文本不触发重试" |
+| **L61-62** | `_looks_like_incomplete_response` 空文本 → `return False` | "模型工具调用后返回空文本不触发重试" |
 | **L94** | `return str(value)` — `finish_reason`/`stop_reason` 元数据存在 | 在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段，默认 `"stop"`，工具调用场景显式设为 `"tool_calls"` |
 | **L315-317** | 最大迭代次数耗尽 — 通过 `CQA_MAX_ITERATIONS=3` 控制 | "达到最大迭代次数时返回警告" |
 

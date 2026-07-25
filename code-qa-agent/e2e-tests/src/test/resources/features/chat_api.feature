@@ -1009,6 +1009,22 @@
        }]
      }
      """
+    当用户发送消息"hello empty response"
+    那么收到的 Socket.IO 事件应满足:
+     """
+     ::eventually: {
+       receivedEvents::filter: {
+         name= new_message
+       } : [ ... {
+         data.output= ```
+
+
+                      ---
+                      ⏱️ 耗时 0秒
+                      ```
+       } ... ]
+     }
+     """
     并且数据应为:
      """
      MockApi::filter: { POST: '/v1/chat/completions' } :
