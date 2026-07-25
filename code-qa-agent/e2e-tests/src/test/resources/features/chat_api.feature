@@ -985,50 +985,98 @@
          | null                  |
        """
 
-   场景: 模型工具调用后返回空文本不触发重试
-     假如Mock API:
-      """
-      POST: '/v1/chat/completions'
-      ---
-      body(LlmResponse): {
-        choices: [{
-          finishReason: 'tool_calls'
-          message: {
-            toolCalls!: [{
-              function(ListDirectory): { ... }
-            }]
-          }
-        }]
-      }
-      ---
-      body(LlmResponse): {
-        choices: [{
-          message: {
-            content: ''
-          }
-        }]
-      }
-      """
-     当用户发送消息"hello empty response"
-     那么收到的 Socket.IO 事件应满足:
-      """
-      ::eventually: {
-        receivedEvents::filter: {
-          name= new_message
-        } : [ ... {
-          data.output= ```
+  场景: 模型工具调用后返回空文本不触发重试
+    假如Mock API:
+     """
+     POST: '/v1/chat/completions'
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         message: {
+           content: ''
+         }
+       }]
+     }
+     """
+    并且数据应为:
+     """
+     MockApi::filter: { POST: '/v1/chat/completions' } :
+       | body.json.tool_choice |
+       | required              |
+       | null                  |
+     """
 
+  场景: 达到最大迭代次数时返回警告
+    假如Mock API:
+     """
+     POST: '/v1/chat/completions'
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     """
+    当用户发送消息"hello max iterations"
+    那么收到的 Socket.IO 事件应满足:
+     """
+     ::eventually: {
+       receivedEvents::filter: {
+         name= new_message
+       } : [ ... {
+         data.output= ```
 
-                       ---
-                       ⏱️ 耗时 0秒
-                       ```
-        } ... ]
-      }
-      """
-     并且数据应为:
-      """
-      MockApi::filter: { POST: '/v1/chat/completions' } :
-        | body.json.tool_choice |
-        | required              |
-        | null                  |
-      """
+                      ⚠️ Reached maximum iterations. Partial results above.
+
+                      ---
+                      ⏱️ 耗时 0秒
+                      ```
+       } ... ]
+     }
+     """
+    并且数据应为:
+     """
+     MockApi::filter: { POST: '/v1/chat/completions' } :
+       | body.json.tool_choice |
+       | required              |
+       | null                  |
+       | null                  |
+     """

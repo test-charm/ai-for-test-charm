@@ -8,7 +8,7 @@
 
 ```
                   覆盖率      未覆盖语句   未覆盖分支      关键缺口
-agent.py    █████████░ 91%    10            8+6          边界条件 + MAX_ITERATIONS
+agent.py    █████████░ 91%     8            6            边界条件
 app.py      ████░░░░░░ 42%    44           10+6           coverage bootstrap + 密码错误 + 会话恢复
 config.py   █████████░ 96%     1            0             database_sync_url
 mcp_server  █████░░░░░ 52%    30            9+3           coverage bootstrap + CLI入口 + fallback
@@ -22,7 +22,7 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 
 ---
 
-## 1. agent.py — 91%（164 语句，10 未覆盖 + 8 部分分支 + 6 未覆盖分支）
+## 1. agent.py — 91%（164 语句，8 未覆盖 + 6 部分分支 + 4 未覆盖分支）
 
 ### ✅ 已通过新增测试覆盖
 
@@ -35,6 +35,7 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 | **L121-122** | `except Exception as e: return f"Tool error ({name}): {e}"` | "工具执行异常时返回错误信息并继续" |
 | **L63-64** | `_looks_like_incomplete_response` 空文本 → `return False` | "模型工具调用后返回空文本不触发重试" |
 | **L94** | `return str(value)` — `finish_reason`/`stop_reason` 元数据存在 | 在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段，默认 `"stop"`，工具调用场景显式设为 `"tool_calls"` |
+| **L315-317** | 最大迭代次数耗尽 — 通过 `CQA_MAX_ITERATIONS=3` 控制 | "达到最大迭代次数时返回警告" |
 
 ### 🔴 仍待补测
 
@@ -43,7 +44,6 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 | ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
 | ~~**L102-103**~~ | ~~`load_system_prompt` 文件不存在~~ | ✅ 已删除死代码 — `system_prompt.md` 随仓库存在，不可达 |
 | ~~**L105-106**~~ | ~~`load_system_prompt` 文件为空~~ | ✅ 已删除死代码 — 同上 |
-| **L316-318** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 需 mock LLM 无限返回 tool_calls |
 | **L322** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
 ### 🟡 其他 profile 未覆盖（非死代码）
@@ -158,5 +158,5 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 4. **app.py 密码错误**（L53-54）— 安全相关，需添加 `CQA_AUTH_PASSWORD` 配置
 5. **app.py 会话恢复**（L68-70）— 功能完整性，需模拟 WebSocket 重连场景
 6. **agent.py 边界条件**（文件缺失 L104-108）— 错误处理健壮性
-7. **agent.py MAX_ITERATIONS**（L318-320）— 边缘路径，价值较低
+7. ~~**agent.py MAX_ITERATIONS**（L318-320）~~ ✅ 已完成 — 通过 `CQA_MAX_ITERATIONS=3` 环境变量控制
 8. **mcp_server.py `main()`**（L102-116）— CLI 入口，可标记 `# pragma: no cover`

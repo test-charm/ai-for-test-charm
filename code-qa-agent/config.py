@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     max_search_results: int = 50
     max_file_lines: int = 300
     auth_password: str = ""
+    max_iterations: int = 200
 
     db_host: str = "localhost"
     db_port: int = 5432

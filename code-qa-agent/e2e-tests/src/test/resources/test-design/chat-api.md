@@ -27,7 +27,7 @@
   └─ _get_messages(thread_id)
        ├─ thread_id 不在 conversations ──→ 新建 system prompt + 首轮注入目录树
        └─ thread_id 已在 conversations ──→ 复用会话，直接追加用户消息
-  └─ ReAct 循环 (for iteration in MAX_ITERATIONS)
+  └─ ReAct 循环 (for iteration in range(settings.max_iterations))
        ├─ has_tool_results == False
        │   └─ llm_with_required_tool (tool_choice=required/auto/any)
        │       ├─ 有 tool_calls ──→ 执行工具 → 继续循环
@@ -39,7 +39,7 @@
        │       ├─ 无 tool_calls + 规划文本 ──→ 追加"请给最终答案" → 继续
        │       └─ 无 tool_calls + 最终答案 ──→ yield → return
        │
-       └─ 达到 MAX_ITERATIONS ──→ 警告 → return
+       └─ 耗尽迭代 ──→ 警告 → return
 
 [_response_text()]
   └─ for block in content:
@@ -87,6 +87,7 @@
 | 含 `finish_reason=tool_calls` | 标准工具调用响应 | 所有工具调用场景 |
 | 含 `finish_reason=stop` | 标准文本响应 | 所有文本回答场景 |
 | 同一 session 连续两次提问 | 第二次提问时已有会话历史 | 多轮对话路径 |
+| 连续 tool_calls 耗尽迭代上限 | mock LLM 始终返回 tool_calls，直到到达 CQA_MAX_ITERATIONS | 最大迭代耗尽路径 |
 
 ## 输出因子
 
@@ -151,6 +152,7 @@
 | Anthropic多内容块文本拼接 | anthropic | 非空字符串 | UUID v4 | tool_calls → 多 text block 回答 | 2 | any → null |
 | 调用未知工具时返回错误信息并继续 | default | 非空字符串 | UUID v4 | tool_calls(unknown) → 最终回答 | 2 | required → null |
 | 工具执行异常时返回错误信息并继续 | default | 非空字符串 | UUID v4 | tool_calls(../etc) → 最终回答 | 2 | required → null |
+| 达到最大迭代次数时返回警告 | default | 非空字符串 | UUID v4 | tool_calls × 3（不返回最终回答） | 3 | required → null → null |
 
 ## 覆盖性检查
 
@@ -168,6 +170,7 @@
    - Anthropic 多内容块 `_response_text()` 路径（`agent.py:56-59` dict + type=="text" 分支）。 ✅ 新增
    - agent `_execute_tool` 未知工具名分支（`agent.py:116-117`）。 ✅ 新增
    - agent `_execute_tool` 工具执行异常分支（`agent.py:121-122`）。 ✅ 新增
+   - agent 达到最大迭代次数路径（`agent.py:315-317`，通过 `CQA_MAX_ITERATIONS=3` 控制）。 ✅ 新增
 2. 输入因子覆盖：
    - `login.username` 的空白/非空两类均覆盖。
    - `client_message.message.id` 的非法/合法两类均覆盖。
@@ -189,7 +192,6 @@
    - `fn.invoke(args)` 正常返回 / 抛异常（`agent.py:118-122`）。 ✅ 新增
    - `finish_reason`/`stop_reason` 元数据存在（`agent.py:94`）：在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段。 ✅ 新增
 4. 已知缺口：
-   - `MAX_ITERATIONS` 达到上限路径（`agent.py:316-318`）：需 200 轮循环，不具实用性。
    - `load_system_prompt` 文件不存在/为空：已删除死代码，`system_prompt.md` 随仓库存在。
    - `_looks_like_incomplete_response` 空文本（`agent.py:65-66`）：边界 case。
    - `llm_base_url` 不存在时的 Anthropic/OpenAI 分支（`agent.py:130`, `agent.py:134`）：当前 profile 设了 base_url。

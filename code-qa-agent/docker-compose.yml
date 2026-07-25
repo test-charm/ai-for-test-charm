@@ -26,6 +26,7 @@ services:
       - .env
     environment:
       - CQA_WORKSPACE_PATH=/workspace
+      - CQA_MAX_ITERATIONS=200
       - CQA_DB_HOST=postgres
       - CQA_DB_PORT=5432
       - CQA_DB_NAME=code_qa_agent
@@ -47,6 +48,7 @@ services:
       - .env
     environment:
       - CQA_WORKSPACE_PATH=/workspace
+      - CQA_MAX_ITERATIONS=200
       - CQA_HOST_WORKSPACE_PATH=${WORKSPACE_PATH:-.}
       - CQA_DB_HOST=postgres
       - CQA_DB_PORT=5432

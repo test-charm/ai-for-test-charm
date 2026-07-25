@@ -50,6 +50,7 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
       CQA_LLM_PROVIDER: openai
       CQA_LLM_MODEL: mock-gpt
+      CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
@@ -94,6 +95,7 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
       CQA_LLM_PROVIDER: openai
       CQA_LLM_MODEL: mock-deepseek-chat
+      CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
@@ -138,6 +140,7 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
       CQA_LLM_PROVIDER: anthropic
       CQA_LLM_MODEL: mock-claude
+      CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080
       CQA_WORKSPACE_PATH: /workspace
@@ -183,6 +186,7 @@ services:
       WATCHFILES_FORCE_POLLING: "true"
       CQA_LLM_PROVIDER: openai
       CQA_LLM_MODEL: mock-gpt
+      CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace

@@ -20,8 +20,6 @@ SYSTEM_PROMPT_PATH = Path(__file__).with_name("system_prompt.md")
 ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
 SystemPromptLoader = Callable[[], str]
 
-MAX_ITERATIONS = 200
-
 
 def _required_tool_choice(provider: str, model: str = "") -> str:
     """Return the tool_choice value for the first ReAct iteration.
@@ -190,20 +188,20 @@ class CodeQAAgent:
         else:
             messages.append(HumanMessage(content=user_input))
 
-        for iteration in range(MAX_ITERATIONS):
+        for iteration in range(settings.max_iterations):
             has_tool_results = self._has_tool_results(messages)
             phase = "auto" if has_tool_results else _required_tool_choice(self.provider, self.model)
             logger.info(
                 "Agent iteration %d/%d thread=%s mode=%s messages=%d has_tool_results=%s",
                 iteration + 1,
-                MAX_ITERATIONS,
+                settings.max_iterations,
                 thread_id,
                 phase,
                 len(messages),
                 has_tool_results,
             )
             if progress_callback:
-                await progress_callback(iteration + 1, MAX_ITERATIONS, None)
+                await progress_callback(iteration + 1, settings.max_iterations, None)
 
             llm = self.llm_with_tools if has_tool_results else self.llm_with_required_tool
             response = await llm.ainvoke(messages)
@@ -283,7 +281,7 @@ class CodeQAAgent:
                 yield ("tool_start", tool_name, json.dumps(tool_args, ensure_ascii=False)[:500])
 
                 if progress_callback:
-                    await progress_callback(iteration + 1, MAX_ITERATIONS, tool_name)
+                    await progress_callback(iteration + 1, settings.max_iterations, tool_name)
 
                 logger.info(
                     "Executing tool thread=%s name=%s args=%s",
