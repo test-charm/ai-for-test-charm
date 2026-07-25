@@ -8,22 +8,18 @@ import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTranspor
 import io.modelcontextprotocol.spec.McpSchema;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.testcharm.dal.Assertions.expect;
 
 public class McpSteps {
 
-    private final List<String> mcpAnswers = new ArrayList<>();
+    private String answer = null;
 
     @当("向MCP服务发送问题{string}")
-    public void askMcp(String question) throws Exception {
-        var transport = HttpClientStreamableHttpTransport.builder("http://localhost:13001")
-                .build();
-
-        McpSyncClient client = McpClient.sync(transport)
+    public void askMcp(String question) {
+        McpSyncClient client = McpClient.sync(HttpClientStreamableHttpTransport.builder("http://localhost:13001")
+                .build())
                 .requestTimeout(Duration.ofSeconds(60))
                 .build();
 
@@ -32,30 +28,20 @@ public class McpSteps {
             var result = client.callTool(
                     new McpSchema.CallToolRequest("ask_repo_question", Map.of("question", question)));
 
-            String answer = null;
             if (result.content() != null && !result.content().isEmpty()) {
                 var content = result.content().get(0);
                 if (content instanceof McpSchema.TextContent textContent) {
                     answer = textContent.text();
                 }
             }
-            mcpAnswers.add(answer != null ? answer : result.toString());
         } finally {
             client.closeGracefully();
         }
     }
 
-    @那么("MCP回答应为{string}")
-    public void verifyMcpAnswer(String expected) {
-        expect(mcpAnswers).should("""
-                : [ ... '%s' ... ]
-                """.formatted(expected));
+    @那么("MCP回答应为:")
+    public void verifyMcpAnswer(String expression) {
+        expect(answer).should(expression);
     }
 
-    @那么("MCP回答应包含{string}")
-    public void verifyMcpAnswerContains(String expected) {
-        expect(mcpAnswers).should("""
-                : [ ... ~= '%s' ... ]
-                """.formatted(expected));
-    }
 }
