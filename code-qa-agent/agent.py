@@ -96,16 +96,7 @@ def _response_stop_reason(response: AIMessage) -> str:
 
 
 def load_system_prompt(prompt_path: str | Path = SYSTEM_PROMPT_PATH) -> str:
-    path = Path(prompt_path)
-    try:
-        prompt = path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError as exc:
-        raise RuntimeError(f"System prompt file not found: {path}") from exc
-
-    if not prompt:
-        raise RuntimeError(f"System prompt file is empty: {path}")
-
-    return prompt
+    return Path(prompt_path).read_text(encoding="utf-8").strip()
 
 
 def _execute_tool(name: str, args: dict) -> str:

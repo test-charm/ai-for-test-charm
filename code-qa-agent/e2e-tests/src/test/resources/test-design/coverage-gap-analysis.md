@@ -41,8 +41,8 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 | 行号 | 代码 | 说明 |
 |------|------|------|
 | ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
-| **L102-103** | `load_system_prompt` 文件不存在 | 边界 case |
-| **L106** | `load_system_prompt` 文件为空 | 同上 |
+| ~~**L102-103**~~ | ~~`load_system_prompt` 文件不存在~~ | ✅ 已删除死代码 — `system_prompt.md` 随仓库存在，不可达 |
+| ~~**L105-106**~~ | ~~`load_system_prompt` 文件为空~~ | ✅ 已删除死代码 — 同上 |
 | **L316-318** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 需 mock LLM 无限返回 tool_calls |
 | **L322** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
