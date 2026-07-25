@@ -187,10 +187,10 @@
    - `isinstance(block, str)` 为假 + dict `type=="text"` 分支（`agent.py:56-59`）。 ✅ 新增
    - `TOOLS_MAP.get(name)` 返回 `None` / 返回有效函数（`agent.py:115-117`）。 ✅ 新增
    - `fn.invoke(args)` 正常返回 / 抛异常（`agent.py:118-122`）。 ✅ 新增
+   - `finish_reason`/`stop_reason` 元数据存在（`agent.py:94`）：在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段。 ✅ 新增
 4. 已知缺口：
-   - `MAX_ITERATIONS` 达到上限路径（`agent.py:318-320`）：需 200 轮循环，不具实用性。
+   - `MAX_ITERATIONS` 达到上限路径（`agent.py:316-318`）：需 200 轮循环，不具实用性。
    - `isinstance(block, str)` 为真的分支（`agent.py:54-55`）：当前 mock 返回 dict 格式，未触发原始字符串路径。
-   - `load_system_prompt` 文件不存在 / 为空（`agent.py:104-105`, `agent.py:108`）：边界 case。
+   - `load_system_prompt` 文件不存在 / 为空（`agent.py:102-103`, `agent.py:106`）：边界 case。
    - `_looks_like_incomplete_response` 空文本（`agent.py:65-66`）：边界 case。
-   - `finish_reason`/`stop_reason` 元数据存在（`agent.py:95-96`）：mock 未产出这些字段。
-   - `llm_base_url` 不存在时的 Anthropic/OpenAI 分支（`agent.py:132`, `agent.py:136`）：当前 profile 设了 base_url。
+   - `llm_base_url` 不存在时的 Anthropic/OpenAI 分支（`agent.py:130`, `agent.py:134`）：当前 profile 设了 base_url。

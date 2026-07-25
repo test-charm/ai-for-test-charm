@@ -8,7 +8,7 @@
 
 ```
                   覆盖率      未覆盖语句   未覆盖分支      关键缺口
-agent.py    █████████░ 90%    12           10+10          边界条件 + MAX_ITERATIONS
+agent.py    █████████░ 91%    10            8+6          边界条件 + MAX_ITERATIONS
 app.py      ████░░░░░░ 42%    44           10+6           coverage bootstrap + 密码错误 + 会话恢复
 config.py   █████████░ 96%     1            0             database_sync_url
 mcp_server  █████░░░░░ 52%    30            9+3           coverage bootstrap + CLI入口 + fallback
@@ -22,7 +22,7 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 
 ---
 
-## 1. agent.py — 90%（166 语句，12 未覆盖 + 10 部分分支 + 10 未覆盖分支）
+## 1. agent.py — 91%（164 语句，10 未覆盖 + 8 部分分支 + 6 未覆盖分支）
 
 ### ✅ 已通过新增测试覆盖
 
@@ -34,17 +34,17 @@ migrate_*.py░░░░░░░░░░  0%   126           44             �
 | **L116-117** | `if not fn: return f"Unknown tool: {name}"` | "调用未知工具时返回错误信息并继续" |
 | **L121-122** | `except Exception as e: return f"Tool error ({name}): {e}"` | "工具执行异常时返回错误信息并继续" |
 | **L63-64** | `_looks_like_incomplete_response` 空文本 → `return False` | "模型工具调用后返回空文本不触发重试" |
+| **L94** | `return str(value)` — `finish_reason`/`stop_reason` 元数据存在 | 在所有 mock 响应中为 `LlmResponse.Choice` 新增 `finishReason` 字段，默认 `"stop"`，工具调用场景显式设为 `"tool_calls"` |
 
 ### 🔴 仍待补测
 
 | 行号 | 代码 | 说明 |
 |------|------|------|
 | ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
-| **L95-96** | `finish_reason`/`stop_reason` 元数据存在 | mock LLM 返回的 metadata 不包含这些字段 |
-| **L104-105** | `load_system_prompt` 文件不存在 | 边界 case |
-| **L108** | `load_system_prompt` 文件为空 | 同上 |
-| **L318-320** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 需 mock LLM 无限返回 tool_calls |
-| **L326** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
+| **L102-103** | `load_system_prompt` 文件不存在 | 边界 case |
+| **L106** | `load_system_prompt` 文件为空 | 同上 |
+| **L316-318** | 最大迭代次数耗尽（`MAX_ITERATIONS`） | 需 mock LLM 无限返回 tool_calls |
+| **L322** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
 ### 🟡 其他 profile 未覆盖（非死代码）
 
