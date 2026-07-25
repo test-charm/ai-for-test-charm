@@ -34,11 +34,6 @@ fi
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 FAILED_PROFILES=""
 
-# 预构建镜像，避免 docker compose up --wait 时因 build 超时
-log_info "Pre-building e2e Docker image..."
-docker compose build 2>&1 | sed 's/^/  /'
-echo
-
 run_profile() {
   profile="$1"
   tags="$2"
@@ -52,7 +47,7 @@ run_profile() {
 
   # 启动当前 profile
   log_info "Starting $profile containers..."
-  docker compose --profile "$profile" up -d --wait 2>&1 | sed 's/^/  /'
+  docker compose --profile "$profile" up -d --build --wait 2>&1 | sed 's/^/  /'
   echo
 
   # 运行测试
