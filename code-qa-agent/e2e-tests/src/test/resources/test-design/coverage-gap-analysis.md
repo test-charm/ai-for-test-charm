@@ -1,7 +1,7 @@
 # 覆盖率缺口分析
 
 > 基于 `e2e-tests/coverage-output/html/index.html`，上次全量收集 2026-07-25  
-> 🆕 **2026-07-26 新增 `tools.feature`（7 场景），覆盖 tools.py 全部 6 个工具的调用路径**  
+> 🆕 **2026-07-26 新增 `tools.feature`（8 场景），覆盖 tools.py 全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑**  
 > 全量测试 default profile 最新数据  
 > 总覆盖率：53%（555 语句中 316 覆盖，200 分支中 46 覆盖）
 > 
@@ -163,14 +163,15 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ## 5. tools.py — 27%（173 语句，117 未覆盖 + 3 部分分支 + 72 未覆盖分支）
 
-### 🆕 2026-07-26 更新：新增 tools.feature（7 个 e2e 场景）
+### 🆕 2026-07-26 更新：新增 tools.feature（8 个 e2e 场景）
 
-`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 7 个场景，覆盖全部 6 个工具的调用路径：
+`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 8 个场景，覆盖全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑：
 
 | 工具 | 场景 | 触发的代码路径 |
 |------|------|---------------|
 | `list_directory` | list_directory对文件路径返回错误 | `is_dir() == False` → `"Not a directory"` |
 | `find_files` | find_files无匹配时返回空结果 | 无 glob 匹配 → `"No files found matching"` |
+| `find_files` | find_files过滤掉IGNORE_DIRS中的.git目录文件 | glob 匹配 `.git/HEAD` → `_should_ignore` 过滤 → matches 为空 |
 | `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
 | `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
 | `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
@@ -182,7 +183,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 尽管全部 6 个工具均被调用，覆盖率仍有限（27%），原因：
 - 每个场景仅触发一个工具的**单一代码路径**（最短路径的错误分支或成功路径）
 - `_safe_path` 正常通过路径被覆盖，但 `ValueError` 路径已在 `chat_api.feature` "工具执行异常"场景覆盖
-- `_should_ignore`、PermissionError 分支、截断逻辑等内部分支未被触发
+- `_should_ignore` 🆕 已通过 "find_files过滤掉IGNORE_DIRS中的.git目录文件" 场景触发匹配路径；PermissionError 分支、截断逻辑等内部分支未被触发
 - `_grep_fallback`（纯 Python fallback）路径未触发（容器已安装 ripgrep）
 
 **剩余未覆盖路径**（均为工具内部边界/异常分支）：

@@ -356,6 +356,65 @@
       }]
       """
 
+  场景: find_files过滤掉IGNORE_DIRS中的.git目录文件
+   假如Mock API:
+     """
+     POST: '/v1/chat/completions'
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: tool_calls
+         message: {
+           toolCalls!: [{
+             function: {
+               name: find_files
+               arguments: ```
+                          {"pattern": "**/HEAD"}
+                          ```
+             }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: stop
+         message: {
+           content: 'find_files结果：已过滤.git目录中的文件。'
+         }
+       }]
+     }
+     """
+   当用户发送消息"test find_files ignores .git"
+   那么收到的 Socket.IO 事件应满足:
+     """
+     ::eventually: {
+       receivedEvents::filter: {
+         name= new_message
+       } : [ ... {
+         data.output: ```
+                      find_files结果：已过滤.git目录中的文件。
+
+                      ---
+                      ⏱️ 耗时 0秒
+                      ```
+       }]
+     }
+     """
+   并且数据应为:
+     """
+     MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+       body.json: {
+         messages: [... {
+           content: 'No files found matching: **/HEAD'
+           role: tool
+           tool_call_id: find_files-0
+         }]
+       }
+     }]
+     """
+
   场景: get_repo_map带glob过滤只分析Python文件
     假如Mock API:
       """

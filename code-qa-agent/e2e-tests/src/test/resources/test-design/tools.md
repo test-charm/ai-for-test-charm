@@ -175,6 +175,7 @@
 | read_file读取不存在文件返回错误 | read_file | `file_path="nonexistent.txt"` | tool_calls(read_file nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.txt" |
 | read_file读取目录路径返回错误 | read_file | `file_path="code-qa-agent"` | tool_calls(read_file directory) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a file: code-qa-agent" |
 | get_symbols分析不存在文件返回错误 | get_symbols | `file_path="nonexistent.py"` | tool_calls(get_symbols nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.py" |
+| find_files过滤掉IGNORE_DIRS中的.git目录文件 | find_files | `pattern="**/HEAD"` | tool_calls(find_files **/HEAD) → 最终回答 | `.git/HEAD` 真实存在但被 `_should_ignore` 过滤，ToolMessage 含 "No files found matching: **/HEAD" |
 | get_repo_map带glob过滤只分析Python文件 | get_repo_map | `file_glob="**/*.py"` | tool_calls(get_repo_map with glob) → 最终回答 | LLM 请求中 ToolMessage 不含 Java/gradle 文件符号 |
 
 ### 用例详情
@@ -221,7 +222,15 @@
 - **预期输出**：工具返回 "File not found: nonexistent.py"
 - **Agent 行为**：正常完成循环
 
-#### 7. get_repo_map 带 glob 过滤
+#### 7. find_files 过滤掉 IGNORE_DIRS 中的 .git 目录文件
+
+- **最短路径**：glob 匹配 `.git/HEAD` → `_should_ignore` 返回 True → 跳过 → matches 为空
+- **输入**：`pattern="**/HEAD"`
+- **预期输出**：工具返回 "No files found matching: \*\*/HEAD"
+- **Agent 行为**：正常完成循环
+- **验证方式**：`.git/HEAD` 在工作区根目录真实存在。若 `_should_ignore` 失效，该文件会出现在结果中导致测试失败。返回 "No files found" 即证明过滤生效。
+
+#### 8. get_repo_map 带 glob 过滤
 
 - **最短路径**：正常遍历，通过 glob 过滤文件
 - **输入**：`file_glob="**/*.py"`
@@ -235,12 +244,12 @@
 | 路径 | 覆盖状态 |
 | --- | --- |
 | `list_directory` → target.is_dir() == False | ✅ 用例 1 |
-| `find_files` → matches 为空 | ✅ 用例 2 |
+| `find_files` → matches 为空 | ✅ 用例 2, 7 |
 | `grep_code` → rg returncode == 1 | ✅ 用例 3 |
 | `read_file` → not exists | ✅ 用例 4 |
 | `read_file` → not is_file (目录) | ✅ 用例 5 |
 | `get_symbols` → not is_file | ✅ 用例 6 |
-| `get_repo_map` → file_glob 过滤 | ✅ 用例 7 |
+| `get_repo_map` → file_glob 过滤 | ✅ 用例 8 |
 | `_safe_path` → ValueError (path traversal) | ✅ 已有：chat_api.feature "工具执行异常" |
 | `_execute_tool` → Unknown tool | ✅ 已有：chat_api.feature "调用未知工具" |
 | `list_directory` → 正常目录树（首轮注入） | ✅ 已有：所有 chat_api 场景 |
@@ -277,7 +286,7 @@
 | 条件 | 覆盖情况 |
 | --- | --- |
 | `_safe_path`: 前缀匹配/不匹配 | ✅ 已有 |
-| `_should_ignore`: 匹配/不匹配 | ✅ 已有（IGNORE_DIRS 过滤） |
+| `_should_ignore`: 匹配/不匹配 | ✅ 用例 7 / 已有 |
 | `list_directory`: `target.is_dir()` 为 True/False | ✅ True: 已有; False: 用例 1 |
 | `list_directory`: `depth > max_depth` | ✅ 已有（max_depth=1 深度限制） |
 | `find_files`: `matches` 为空/非空 | ✅ 用例 2 / 已有 |
