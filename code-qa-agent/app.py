@@ -51,8 +51,15 @@ def get_data_layer():
 @cl.password_auth_callback
 async def auth_callback(username: str, password: str) -> cl.User | None:
     if not username.strip():
-        return None
-    return cl.User(identifier=username.strip(), metadata={"role": "user"})
+        user = None
+    else:
+        user = cl.User(identifier=username.strip(), metadata={"role": "user"})
+    if _coverage_data_file:
+        try:
+            _save_coverage()
+        except Exception:
+            pass
+    return user
 
 
 @cl.on_chat_start
