@@ -172,6 +172,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | `list_directory` | list_directory对文件路径返回错误 | `is_dir() == False` → `"Not a directory"` |
 | `find_files` | find_files无匹配时返回空结果 | 无 glob 匹配 → `"No files found matching"` |
 | `find_files` | find_files过滤掉IGNORE_DIRS中的.git目录文件 | glob 匹配 `.git/HEAD` → `_should_ignore` 过滤 → matches 为空 |
+| `find_files` | 🆕 find_files正常匹配返回文件列表 | glob 匹配 `build.gradle` → 非忽略 + is_file → 返回文件路径 |
 | `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
 | `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
 | `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
@@ -191,7 +192,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | 工具 | 未覆盖路径 |
 |------|-----------|
 | `list_directory` | PermissionError 静默跳过（L52-53）、500 行截断（L74） |
-| `find_files` | 100 结果截断、path traversal（已有其他场景覆盖） |
+| `find_files` | 100 结果截断（path traversal 已有其他场景覆盖） |
 | `grep_code` | ripgrep 错误退出（returncode > 1）、超时、纯 Python fallback、8000 字符截断 |
 | `read_file` | PermissionError、正常读取路径（已有 `chat_api.feature` 覆盖） |
 | `get_symbols` | 正常符号提取（依赖 tree-sitter）、不支持语言提示 |

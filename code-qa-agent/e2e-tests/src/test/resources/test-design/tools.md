@@ -171,6 +171,7 @@
 | --- | --- | --- | --- | --- |
 | list_directory对文件路径返回错误 | list_directory | `path="app.py"` | tool_calls(list_directory on app.py) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a directory: app.py"，最终回答正常 |
 | find_files无匹配时返回空结果 | find_files | `pattern="*.nonexistent"` | tool_calls(find_files *.nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "No files found matching: *.nonexistent" |
+| find_files正常匹配返回文件列表 | find_files | `pattern="build.gradle"` | tool_calls(find_files build.gradle) → 最终回答 | LLM 请求中 ToolMessage 含 "build.gradle"，覆盖正常匹配路径 |
 | grep_code无匹配时返回空结果 | grep_code | `pattern="ZZZ_NONEXISTENT_PATTERN"` | tool_calls(grep_code nonexistent pattern) → 最终回答 | LLM 请求中 ToolMessage 含 "No matches found." |
 | read_file读取不存在文件返回错误 | read_file | `file_path="nonexistent.txt"` | tool_calls(read_file nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.txt" |
 | read_file读取目录路径返回错误 | read_file | `file_path="code-qa-agent"` | tool_calls(read_file directory) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a file: code-qa-agent" |
@@ -230,6 +231,14 @@
 - **Agent 行为**：正常完成循环
 - **验证方式**：`.git/HEAD` 在工作区根目录真实存在。若 `_should_ignore` 失效，该文件会出现在结果中导致测试失败。返回 "No files found" 即证明过滤生效。
 
+#### 7.1. find_files 正常匹配返回文件列表 🆕
+
+- **最短路径**：`_safe_path` 通过 → glob 匹配 `build.gradle` → `_should_ignore` False → `is_file()` True → 追加到 matches → 返回单文件列表
+- **输入**：`pattern="build.gradle"`
+- **预期输出**：工具返回 "build.gradle"
+- **Agent 行为**：正常完成循环
+- **覆盖目标**：L90→L93（append）、L97 False 分支、L100（join）、L101 False（< 100 无截断）、L103（正常返回）。这是 find_files 核心正常匹配路径，之前只有"无匹配"和"过滤"两个边界场景。
+
 #### 8. get_repo_map 带 glob 过滤
 
 - **最短路径**：正常遍历，通过 glob 过滤文件
@@ -245,6 +254,7 @@
 | --- | --- |
 | `list_directory` → target.is_dir() == False | ✅ 用例 1 |
 | `find_files` → matches 为空 | ✅ 用例 2, 7 |
+| `find_files` → 正常匹配返回文件列表 | ✅ 🆕 用例 7.1 |
 | `grep_code` → rg returncode == 1 | ✅ 用例 3 |
 | `read_file` → not exists | ✅ 用例 4 |
 | `read_file` → not is_file (目录) | ✅ 用例 5 |
@@ -270,6 +280,7 @@
 | `list_directory.path`: 文件路径 | ✅ 用例 1 |
 | `list_directory.path`: path traversal | ✅ 已有 |
 | `find_files.pattern`: 有匹配 | ✅ 已有（首轮目录树注入） |
+| `find_files.pattern`: 有匹配 | ✅ 🆕 用例 7.1 |
 | `find_files.pattern`: 无匹配 | ✅ 用例 2 |
 | `grep_code.pattern`: 有匹配 | 未直接测试 |
 | `grep_code.pattern`: 无匹配 | ✅ 用例 3 |
@@ -289,7 +300,7 @@
 | `_should_ignore`: 匹配/不匹配 | ✅ 用例 7 / 已有 |
 | `list_directory`: `target.is_dir()` 为 True/False | ✅ True: 已有; False: 用例 1 |
 | `list_directory`: `depth > max_depth` | ✅ 已有（max_depth=1 深度限制） |
-| `find_files`: `matches` 为空/非空 | ✅ 用例 2 / 已有 |
+| `find_files`: `matches` 为空/非空 | ✅ 用例 2 / 🆕 用例 7.1 |
 | `find_files`: `len(matches) >= 100` | 未覆盖 |
 | `grep_code`: `result.returncode == 0/1/else` | ✅ 0: 间接; 1: 用例 3 |
 | `grep_code`: `FileNotFoundError` / `TimeoutExpired` | 未覆盖 |
