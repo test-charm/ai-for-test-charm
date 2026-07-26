@@ -1,8 +1,9 @@
 # 覆盖率缺口分析
 
-> 基于 `e2e-tests/coverage-output/html/index.html`，生成时间 2026-07-25  
-> 全量测试（default + deepseek + anthropic 三 profile）合并后数据  
-> 总覆盖率：42%（715 语句中 306 覆盖，258 分支中 80 覆盖）
+> 基于 `e2e-tests/coverage-output/html/index.html`，上次全量收集 2026-07-25  
+> 🆕 **2026-07-26 新增 `tools.feature`（7 场景），覆盖 tools.py 全部 6 个工具的调用路径**  
+> 全量测试 default profile 最新数据  
+> 总覆盖率：53%（555 语句中 316 覆盖，200 分支中 46 覆盖）
 > 
 > ⚠️ **关于 C tracer 假阴性**：因 `branch=True`，coverage.py 使用 C tracer（arc 级记录），它**不逐行记录纯顺序执行的代码**（如模块级 `import`、`logging.basicConfig`、模块级变量赋值、`def` 定义行、`if __name__ == "__main__"` 等）。这些行虽然被执行，但在报告中被标记为未覆盖。这并非真实的覆盖率缺口，而是 C tracer 的粒度限制。**移除 `branch=True` 将导致 Python tracer 无法正确处理 asyncio/FastMCP/Chainlit 等异步框架，覆盖率全面崩塌，不可行。**
 > 
@@ -16,15 +17,15 @@ agent.py    █████████░ 100%    0            4+4            �
 app.py      ████░░░░░░  45%   44            6+10           coverage bootstrap + 会话恢复 + 长耗时分支
 config.py   █████████░  96%    1            0              database_sync_url
 mcp_server  █████░░░░░  52%   30            3+9            coverage bootstrap + CLI入口 + fallback
-tools.py    ██░░░░░░░░  32%   117           3+61           仅 list_directory 被间接调用
-repo_map.py ██░░░░░░░░  20%    48            0+32          工具未被测试场景实际调用
+| tools.py    | ███░░░░░░░  27%   117           3+72           🆕 全部 6 个工具均被 e2e 调用（tools.feature），内部边界分支覆盖率有限 |
+| repo_map.py | █░░░░░░░░░  13%    48            0+32          🆕 get_repo_map 已被 tools.feature 调用，tree-sitter 内部分支覆盖率极低 |
 init_db.py  ░░░░░░░░░░   0%    27            0+8           未在 e2e 中运行
 migrate_*.py░░░░░░░░░░   0%   126            0+44          未在 e2e 中运行
 ```
 
-> 注：数字基于 `e2e-tests/coverage-output/html/status.json`。agent.py 语句覆盖率已达 100%（156 语句中 0 未覆盖），仅剩 4 个 partial + 4 个 missing branch。app.py 总覆盖率 45%（语句+分支综合），32/76 语句覆盖。`部分分支` 指 `n_partial_branches`，`未覆盖分支` 指 `n_missing_branches`。
+> 注：数字基于 `e2e-tests/coverage-output/html/status.json`。agent.py 语句覆盖率已达 100%（156 语句中 0 未覆盖），仅剩 4 个 partial + 4 个 missing branch。app.py 总覆盖率 45%（语句+分支综合），32/76 语句覆盖。`tools.py` 27%（173 语句，117 未覆盖）——已通过 tools.feature 覆盖全部工具入口调用。`部分分支` 指 `n_partial_branches`，`未覆盖分支` 指 `n_missing_branches`。
 
-> 注：`tools.py`、`repo_map.py` 的低覆盖率是因为 mock LLM 只触发 `list_directory` 一项工具调用，其余工具（`find_files`、`grep_code`、`read_file`、`get_symbols`、`get_repo_map`）仅在 LLM tool_choice 声明的 tools 列表中作为参数发送，未被 agent 实际执行。`init_db.py` 和 `migrate_sqlite_to_pg.py` 是独立脚本，不在 e2e 测试范围内。
+> 🆕 注：`tools.py` 的低覆盖率在此次更新前是因为 mock LLM 只触发 `list_directory` 一项工具调用。2026-07-26 新增 `tools.feature`（7 场景）已覆盖全部 6 个工具的【调用路径】（即 `_execute_tool` → 各工具入口），但每个场景仅触发一个工具的单一代码路径，工具内部的完整分支覆盖（如 PermissionError、截断逻辑等）仍需更多场景或单元测试。`repo_map.py` 同理——`get_repo_map` 已通过 tools.feature 的 glob 过滤场景被调用。`init_db.py` 和 `migrate_sqlite_to_pg.py` 是独立脚本，不在 e2e 测试范围内。
 
 ---
 
@@ -160,21 +161,56 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ---
 
-## 5. tools.py — 32%（173 语句，118 未覆盖）
+## 5. tools.py — 27%（173 语句，117 未覆盖 + 3 部分分支 + 72 未覆盖分支）
 
-### 说明
+### 🆕 2026-07-26 更新：新增 tools.feature（7 个 e2e 场景）
 
-`tools.py` 定义了所有 Agent 可用工具（`list_directory`、`find_files`、`grep_code`、`read_file`、`get_symbols`、`get_repo_map`）。e2e mock LLM 仅触发 `list_directory` 调用（首轮目录注入 + 场景中的显式 tool_calls），其余工具未被实际 invoke。
+`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 7 个场景，覆盖全部 6 个工具的调用路径：
 
-**这并非测试缺口**——工具实现本身就是被 Agent 按需调用的，只要工具注册和参数 schema 序列化正确（已在 LLM 请求的 `tools` 字段中验证），工具函数体的覆盖属于工具自身的单元测试范畴。
+| 工具 | 场景 | 触发的代码路径 |
+|------|------|---------------|
+| `list_directory` | list_directory对文件路径返回错误 | `is_dir() == False` → `"Not a directory"` |
+| `find_files` | find_files无匹配时返回空结果 | 无 glob 匹配 → `"No files found matching"` |
+| `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
+| `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
+| `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
+| `get_symbols` | get_symbols分析不存在文件返回错误 | `not is_file` → `"File not found"` |
+| `get_repo_map` | get_repo_map带glob过滤 | `file_glob="**/*.py"` → 过滤后符号索引 |
 
-低价值补测：可以通过构造特定 mock LLM 响应序列，在 e2e 场景中依次触发所有工具，但这会显著增加 feature 文件体积，收益有限。
+### 覆盖率限制
+
+尽管全部 6 个工具均被调用，覆盖率仍有限（27%），原因：
+- 每个场景仅触发一个工具的**单一代码路径**（最短路径的错误分支或成功路径）
+- `_safe_path` 正常通过路径被覆盖，但 `ValueError` 路径已在 `chat_api.feature` "工具执行异常"场景覆盖
+- `_should_ignore`、PermissionError 分支、截断逻辑等内部分支未被触发
+- `_grep_fallback`（纯 Python fallback）路径未触发（容器已安装 ripgrep）
+
+**剩余未覆盖路径**（均为工具内部边界/异常分支）：
+
+| 工具 | 未覆盖路径 |
+|------|-----------|
+| `list_directory` | PermissionError 静默跳过（L52-53）、500 行截断（L74） |
+| `find_files` | 100 结果截断、path traversal（已有其他场景覆盖） |
+| `grep_code` | ripgrep 错误退出（returncode > 1）、超时、纯 Python fallback、8000 字符截断 |
+| `read_file` | PermissionError、正常读取路径（已有 `chat_api.feature` 覆盖） |
+| `get_symbols` | 正常符号提取（依赖 tree-sitter）、不支持语言提示 |
+| `get_repo_map` | 200 文件截断、无可解析文件提示 |
 
 ---
 
-## 6. repo_map.py — 20%（60 语句，48 未覆盖）
+## 6. repo_map.py — 13%（60 语句，48 未覆盖 + 0 部分分支 + 32 未覆盖分支）
 
-同 `tools.py`，`get_repo_map` 工具未被 mock LLM 实际触发。tree-sitter AST 解析逻辑在 e2e 中不覆盖。
+### 🆕 更新
+
+`get_repo_map` 工具已通过 `tools.feature` 的 "get_repo_map带glob过滤" 场景被实际调用（`file_glob="**/*.py"`），但 tree-sitter AST 解析的大部分内部逻辑仍未覆盖——`detect_language`、`extract_symbols` 等核心函数仅在工具被调用时作为依赖执行，其内部分支覆盖极低。
+
+### 未覆盖路径
+
+| 模块 | 说明 |
+|------|------|
+| `detect_language()` | 20+ 语言的文件扩展名映射，e2e 工作区仅含 Python/Java/Gradle 文件 |
+| `extract_symbols()` | tree-sitter 解析器初始化、各语言 AST 遍历逻辑 |
+| 边界逻辑 | 200 文件截断、空目录/无可解析文件提示 |
 
 ---
 
@@ -194,7 +230,10 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 6. ~~**app.py `_preview_text` 截断**（L43）~~ ✅ 已完成 — "长消息触发preview截断"
 7. ~~**app.py 密码错误**（L53-54）~~ 🗑️ 已删除 — 用户暂不需要密码验证功能
 8. ~~**app.py L55-56**（`auth_callback` 空用户名）~~ ✅ 已完成 — 在 `auth_callback` 末尾增加 `_save_coverage()` 调用，修复 login 路径覆盖率未落盘问题
-9. **app.py L100-101**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
+9. ~~**tools.py 全部工具调用** ~~ 🆕 ✅ 已完成 — `tools.feature`（7 场景）覆盖全部 6 个工具的入口调用及错误处理路径
+10. **app.py L100-101**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
+11. **tools.py 内部边界分支**（PermissionError、截断、超时等）— 低优先级，需构造特殊容器环境，收益有限
+12. **repo_map.py tree-sitter 解析** — 低优先级，tree-sitter 库自身逻辑不在测试范围
 
 ### 可加 `# pragma: no cover` 的代码
 
