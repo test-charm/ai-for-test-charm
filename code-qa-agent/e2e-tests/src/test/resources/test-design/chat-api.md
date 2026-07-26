@@ -10,7 +10,7 @@
 
 重点验证：
 
-1. 登录失败分支（`login.feature` 独立覆盖）。
+1. 登录失败分支（`login.feature` 独立覆盖）。✅ 已修复覆盖率落盘：`app.py` `auth_callback` 末尾增加 `_save_coverage()` 调用，确保 login 路径覆盖率数据不丢失。
 2. 聊天消息 payload 非法分支。
 3. 聊天成功分支，以及后端对 LLM 接口的多次调用行为。
 4. Agent ReAct 循环中的重试路径（无工具调用重试、规划文本重试）。

@@ -84,7 +84,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | 行号 | 代码 | 说明 |
 |------|------|------|
 | **L46-47** | `get_data_layer()` 装饰器+定义行 | SQLAlchemyDataLayer 初始化回调。L48 已标记 `run`，框架确实调用 |
-| **L55-56** | `auth_callback` 用户名为空 → `return None` | Chainlit 框架层预校验 username，保证传入时已非空——框架保障下的死代码。可加 `# pragma: no cover` |
+| **L55-56** | `auth_callback` 用户名为空 → `return None` | 🆕 已修复 — 之前覆盖率为 0 是因为 `_save_coverage()` 仅在 `on_message` 末尾调用，login 请求不触发 `on_message`。已在 `auth_callback` 末尾增加 `_save_coverage()` 调用来修复。并非框架死代码 |
 | **L100-101** | 耗时超过 1 分钟的分支（`minutes > 0`） | `par` 标注 "condition was never true"——所有 query 在 1 分钟内完成 |
 | **L118-119** | `_save_coverage()` 异常 → `pass` | 异常安全分支，正常环境不可达。可加 `# pragma: no cover` |
 
@@ -104,7 +104,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 |------|------|------|
 | **L41** `if len(compact) <= limit` | "condition always true" → 🆕 已覆盖 | ✅ 新增长消息测试触发截断分支 |
 | ~~**L53**~~ | ~~密码校验~~ | 🗑️ 已删除 — 用户暂不需要密码验证功能 |
-| **L55** `if not username.strip()` | "condition never true" | ⚠️ Chainlit 框架层预校验，username 传进来已非空。框架保障下的死代码 |
+| **L55** `if not username.strip()` | "condition never true" | 🆕 已修复 — 非死代码，实际已执行但 `_save_coverage()` 未在 login 路径调用导致覆盖率数据未落盘。已在 `auth_callback` 末尾增加保存 |
 | **L88** `async for ...` | "loop didn't complete" | ❌ C tracer 假阴性：`break` 退出循环 |
 | **L100** `if minutes > 0` | "condition never true" | ✅ 真缺口：mock 响应太快，低优先级 |
 | **L115** `if _coverage_data_file` | "condition always true" | ✅ 真缺口：coverage 环境始终启用 |
@@ -193,7 +193,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 5. ~~**app.py 会话恢复**（L68-70）~~ ✅ 已完成 — "断开重连后恢复会话不重新发送欢迎消息"
 6. ~~**app.py `_preview_text` 截断**（L43）~~ ✅ 已完成 — "长消息触发preview截断"
 7. ~~**app.py 密码错误**（L53-54）~~ 🗑️ 已删除 — 用户暂不需要密码验证功能
-8. **app.py L55-56**（`auth_callback` 空用户名）— Chainlit 框架保障下的死代码，推荐加 `# pragma: no cover`
+8. ~~**app.py L55-56**（`auth_callback` 空用户名）~~ ✅ 已完成 — 在 `auth_callback` 末尾增加 `_save_coverage()` 调用，修复 login 路径覆盖率未落盘问题
 9. **app.py L100-101**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
 
 ### 可加 `# pragma: no cover` 的代码
@@ -201,7 +201,6 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | 文件 | 行号 | 原因 |
 |------|------|------|
 | `app.py` | L2-23 | Coverage bootstrap，鸡生蛋问题 |
-| `app.py` | L55-56 | Chainlit 框架层预校验 username——框架保障下的死代码 |
 | `app.py` | L100-101 | 长耗时时间格式，mock 场景下不可达 |
 | `app.py` | L118-119 | `_save_coverage()` 异常安全分支，正常环境不可达 |
 | `mcp_server.py` | L13-29 | Coverage bootstrap，同上 |
