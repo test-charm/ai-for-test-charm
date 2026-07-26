@@ -290,7 +290,8 @@ class CodeQAAgent:
                     tool_args_preview,
                 )
                 result = _execute_tool(tool_name, tool_args)
-                truncated = result[:4000] if len(result) > 4000 else result
+                max_chars = settings.max_tool_result_chars
+                truncated = result[:max_chars] if len(result) > max_chars else result
                 logger.info(
                     "Tool result thread=%s name=%s chars=%d preview=%r",
                     thread_id,

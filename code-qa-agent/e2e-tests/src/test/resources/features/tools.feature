@@ -474,6 +474,65 @@
       }]
       """
 
+  场景: find_files结果超过100个时触发截断
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: tool_calls
+          message: {
+            toolCalls!: [{
+              function: {
+                name: find_files
+                arguments: ```
+                           {"pattern": "**/*.java"}
+                           ```
+              }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: stop
+          message: {
+            content: 'find_files截断结果：匹配过多文件已截断。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"test find_files truncation"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output: ```
+                       find_files截断结果：匹配过多文件已截断。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        }]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+        body.json: {
+          messages: [... {
+            content = /.*\(limited to 100 results\)/
+            role: tool
+            tool_call_id: find_files-0
+          }]
+        }
+      }]
+      """
+
   场景: get_repo_map带glob过滤只分析Python文件
     假如Mock API:
       """

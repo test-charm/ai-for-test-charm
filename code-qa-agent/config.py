@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     workspace_path: str = "/workspace"
     max_search_results: int = 50
     max_file_lines: int = 300
+    max_tool_result_chars: int = 16000
     auth_password: str = ""
     max_iterations: int = 200
 

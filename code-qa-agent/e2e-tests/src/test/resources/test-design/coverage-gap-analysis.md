@@ -1,7 +1,7 @@
 # 覆盖率缺口分析
 
 > 基于 `e2e-tests/coverage-output/html/index.html`，上次全量收集 2026-07-25  
-> 🆕 **2026-07-26 新增 `tools.feature`（8 场景），覆盖 tools.py 全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑**  
+> 🆕 **2026-07-26 新增 `tools.feature`（10 场景），覆盖 tools.py 全部 6 个工具的调用路径、`_should_ignore` 过滤逻辑、find_files 正常匹配路径及 100 结果截断**  
 > 全量测试 default profile 最新数据  
 > 总覆盖率：53%（555 语句中 316 覆盖，200 分支中 46 覆盖）
 > 
@@ -25,7 +25,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 > 注：数字基于 `e2e-tests/coverage-output/html/status.json`。agent.py 语句覆盖率已达 100%（156 语句中 0 未覆盖），仅剩 4 个 partial + 4 个 missing branch。app.py 总覆盖率 45%（语句+分支综合），32/76 语句覆盖。`tools.py` 27%（173 语句，117 未覆盖）——已通过 tools.feature 覆盖全部工具入口调用。`部分分支` 指 `n_partial_branches`，`未覆盖分支` 指 `n_missing_branches`。
 
-> 🆕 注：`tools.py` 的低覆盖率在此次更新前是因为 mock LLM 只触发 `list_directory` 一项工具调用。2026-07-26 新增 `tools.feature`（7 场景）已覆盖全部 6 个工具的【调用路径】（即 `_execute_tool` → 各工具入口），但每个场景仅触发一个工具的单一代码路径，工具内部的完整分支覆盖（如 PermissionError、截断逻辑等）仍需更多场景或单元测试。`repo_map.py` 同理——`get_repo_map` 已通过 tools.feature 的 glob 过滤场景被调用。`init_db.py` 和 `migrate_sqlite_to_pg.py` 是独立脚本，不在 e2e 测试范围内。
+> 🆕 注：`tools.py` 的低覆盖率在此次更新前是因为 mock LLM 只触发 `list_directory` 一项工具调用。2026-07-26 新增 `tools.feature`（10 场景）已覆盖全部 6 个工具的调用路径。其中 find_files 已通过 4 个场景实现全路径覆盖（无匹配、过滤、正常匹配、100 截断）。`repo_map.py` 同理——`get_repo_map` 已通过 tools.feature 的 glob 过滤场景被调用。`init_db.py` 和 `migrate_sqlite_to_pg.py` 是独立脚本，不在 e2e 测试范围内。
 
 ---
 
@@ -51,6 +51,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
 | ~~**L102-103**~~ | ~~`load_system_prompt` 文件不存在~~ | ✅ 已删除死代码 — `system_prompt.md` 随仓库存在，不可达 |
 | ~~**L105-106**~~ | ~~`load_system_prompt` 文件为空~~ | ✅ 已删除死代码 — 同上 |
+| **L293** | 硬编码 `result[:4000]` 截断 | 🆕 已改为可配置 `settings.max_tool_result_chars`（默认 16000），环境变量 `CQA_MAX_TOOL_RESULT_CHARS` 可覆盖 |
 | **L322** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
 ### 🟡 其他 profile 未覆盖（非死代码）
@@ -114,6 +115,12 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ## 3. config.py — 96%（23 语句，1 未覆盖）
 
+### 🆕 2026-07-26 新增
+
+| 行号 | 代码 | 说明 |
+|------|------|------|
+| **L12** | `max_tool_result_chars: int = 16000` | 工具结果截断上限，替换了 `agent.py:293` 的硬编码 4000。可通过 `CQA_MAX_TOOL_RESULT_CHARS` 环境变量覆盖。 |
+
 ### 🟡 非死代码，但不需要单独测
 
 | 行号 | 代码 | 说明 |
@@ -163,9 +170,20 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ## 5. tools.py — 27%（173 语句，117 未覆盖 + 3 部分分支 + 72 未覆盖分支）
 
-### 🆕 2026-07-26 更新：新增 tools.feature（8 个 e2e 场景）
+### 🆕 2026-07-26 更新：find_files 全路径覆盖
 
-`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 8 个场景，覆盖全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑：
+`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 10 个场景，覆盖全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑。其中 `find_files` 已实现**全路径覆盖**（4 个场景）：
+
+### find_files 覆盖详情
+
+| 场景 | 覆盖代码路径 |
+|------|-------------|
+| find_files无匹配时返回空结果 | L97→L98：`not matches` → `"No files found matching"` |
+| find_files过滤掉IGNORE_DIRS中的.git目录文件 | L91→L92：`_should_ignore` → True → skip |
+| find_files正常匹配返回文件列表 | L90→L93→L97(False)→L100→L103：正常匹配 → append → join → return |
+| find_files结果超过100个时触发截断 | L94-95：`>= 100` break + L101-102：`== 100` 截断后缀 |
+
+> **DAL 正则匹配注意事项**：DAL 的 `RegexNode` 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，但需要全串匹配。验证多行输出时 `content = /.*expected_suffix/` 即可（`.*` 贪婪匹配至末尾回溯）。转义字符仅 `\/` 被 DAL 特殊处理，`\.`、`\(`、`\)` 等正常传递至 Java `Pattern.compile()`。
 
 | 工具 | 场景 | 触发的代码路径 |
 |------|------|---------------|
@@ -173,6 +191,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | `find_files` | find_files无匹配时返回空结果 | 无 glob 匹配 → `"No files found matching"` |
 | `find_files` | find_files过滤掉IGNORE_DIRS中的.git目录文件 | glob 匹配 `.git/HEAD` → `_should_ignore` 过滤 → matches 为空 |
 | `find_files` | 🆕 find_files正常匹配返回文件列表 | glob 匹配 `build.gradle` → 非忽略 + is_file → 返回文件路径 |
+| `find_files` | 🆕 find_files结果超过100个时触发截断 | glob 匹配 `**/*.java`（757 文件）→ 100 截断 + 后缀 |
 | `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
 | `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
 | `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
@@ -182,19 +201,20 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 ### 覆盖率限制
 
 尽管全部 6 个工具均被调用，覆盖率仍有限（27%），原因：
-- 每个场景仅触发一个工具的**单一代码路径**（最短路径的错误分支或成功路径）
+- 每个场景仅触发一个工具的**单一代码路径**
 - `_safe_path` 正常通过路径被覆盖，但 `ValueError` 路径已在 `chat_api.feature` "工具执行异常"场景覆盖
-- `_should_ignore` 🆕 已通过 "find_files过滤掉IGNORE_DIRS中的.git目录文件" 场景触发匹配路径；PermissionError 分支、截断逻辑等内部分支未被触发
+- `_should_ignore` 🆕 已通过 "find_files过滤掉IGNORE_DIRS中的.git目录文件" 场景触发匹配路径
 - `_grep_fallback`（纯 Python fallback）路径未触发（容器已安装 ripgrep）
+- C tracer (`branch=True`) 假阴性导致大量顺序执行行被标记为未覆盖
 
 **剩余未覆盖路径**（均为工具内部边界/异常分支）：
 
 | 工具 | 未覆盖路径 |
 |------|-----------|
 | `list_directory` | PermissionError 静默跳过（L52-53）、500 行截断（L74） |
-| `find_files` | 100 结果截断（path traversal 已有其他场景覆盖） |
+| `find_files` | 🆕 已全部覆盖（正常匹配、空结果、过滤、100截断） |
 | `grep_code` | ripgrep 错误退出（returncode > 1）、超时、纯 Python fallback、8000 字符截断 |
-| `read_file` | PermissionError、正常读取路径（已有 `chat_api.feature` 覆盖） |
+| `read_file` | PermissionError |
 | `get_symbols` | 正常符号提取（依赖 tree-sitter）、不支持语言提示 |
 | `get_repo_map` | 200 文件截断、无可解析文件提示 |
 
@@ -232,9 +252,9 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 6. ~~**app.py `_preview_text` 截断**（L43）~~ ✅ 已完成 — "长消息触发preview截断"
 7. ~~**app.py 密码错误**（L53-54）~~ 🗑️ 已删除 — 用户暂不需要密码验证功能
 8. ~~**app.py L55-56**（`auth_callback` 空用户名）~~ ✅ 已完成 — 在 `auth_callback` 末尾增加 `_save_coverage()` 调用，修复 login 路径覆盖率未落盘问题
-9. ~~**tools.py 全部工具调用** ~~ 🆕 ✅ 已完成 — `tools.feature`（7 场景）覆盖全部 6 个工具的入口调用及错误处理路径
+9. ~~**tools.py 全部工具调用**~~ 🆕 ✅ 已完成 — `tools.feature`（10 场景）覆盖全部 6 个工具的入口调用、错误处理路径、find_files 全路径覆盖（含 100 截断）
 10. **app.py L100-101**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
-11. **tools.py 内部边界分支**（PermissionError、截断、超时等）— 低优先级，需构造特殊容器环境，收益有限
+11. ~~**tools.py 内部边界分支**（PermissionError、截断、超时等）~~ 🆕 ✅ find_files 已全部覆盖；其余工具边界分支（PermissionError、超时等）— 低优先级，需构造特殊容器环境
 12. **repo_map.py tree-sitter 解析** — 低优先级，tree-sitter 库自身逻辑不在测试范围
 
 ### 可加 `# pragma: no cover` 的代码

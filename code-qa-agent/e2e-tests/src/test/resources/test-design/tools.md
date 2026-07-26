@@ -172,6 +172,7 @@
 | list_directory对文件路径返回错误 | list_directory | `path="app.py"` | tool_calls(list_directory on app.py) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a directory: app.py"，最终回答正常 |
 | find_files无匹配时返回空结果 | find_files | `pattern="*.nonexistent"` | tool_calls(find_files *.nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "No files found matching: *.nonexistent" |
 | find_files正常匹配返回文件列表 | find_files | `pattern="build.gradle"` | tool_calls(find_files build.gradle) → 最终回答 | LLM 请求中 ToolMessage 含 "build.gradle"，覆盖正常匹配路径 |
+| find_files结果超过100个时触发截断 | find_files | `pattern="**/*.java"` | tool_calls(find_files **/*.java) → 最终回答 | 工作区 757 个 .java 文件，触发 100 结果截断。LLM 请求中 ToolMessage 正则匹配 `.*\(limited to 100 results\)/` |
 | grep_code无匹配时返回空结果 | grep_code | `pattern="ZZZ_NONEXISTENT_PATTERN"` | tool_calls(grep_code nonexistent pattern) → 最终回答 | LLM 请求中 ToolMessage 含 "No matches found." |
 | read_file读取不存在文件返回错误 | read_file | `file_path="nonexistent.txt"` | tool_calls(read_file nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.txt" |
 | read_file读取目录路径返回错误 | read_file | `file_path="code-qa-agent"` | tool_calls(read_file directory) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a file: code-qa-agent" |
@@ -239,6 +240,15 @@
 - **Agent 行为**：正常完成循环
 - **覆盖目标**：L90→L93（append）、L97 False 分支、L100（join）、L101 False（< 100 无截断）、L103（正常返回）。这是 find_files 核心正常匹配路径，之前只有"无匹配"和"过滤"两个边界场景。
 
+#### 7.2. find_files 结果超过 100 个时触发截断 🆕
+
+- **最短路径**：`_safe_path` 通过 → glob 匹配 `**/*.java`（757 文件）→ 追加到 matches → L94 `>= 100` → break → L101 `== 100` → 追加截断后缀
+- **输入**：`pattern="**/*.java"`
+- **预期输出**：工具返回 100 行文件路径 + `\n... (limited to 100 results)`
+- **Agent 行为**：正常完成循环
+- **验证方式**：DAL 正则匹配 `content = /.*\(limited to 100 results\)/`。DAL-java 的 RegexNode 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，全串必须匹配。此前 `agent.py:293` 硬编码 4000 字符截断导致 ToolMessage 被截断，现已改为可配置的 `max_tool_result_chars`（默认 16000，环境变量 `CQA_MAX_TOOL_RESULT_CHARS`），确保完整结果送达 LLM/MockServer。
+- **覆盖目标**：L94-95（`>= 100` break）、L101-102（`== 100` 截断后缀）。至此 find_files 全部代码路径已覆盖。
+
 #### 8. get_repo_map 带 glob 过滤
 
 - **最短路径**：正常遍历，通过 glob 过滤文件
@@ -255,6 +265,7 @@
 | `list_directory` → target.is_dir() == False | ✅ 用例 1 |
 | `find_files` → matches 为空 | ✅ 用例 2, 7 |
 | `find_files` → 正常匹配返回文件列表 | ✅ 🆕 用例 7.1 |
+| `find_files` → 100 结果截断 | ✅ 🆕 用例 7.2 |
 | `grep_code` → rg returncode == 1 | ✅ 用例 3 |
 | `read_file` → not exists | ✅ 用例 4 |
 | `read_file` → not is_file (目录) | ✅ 用例 5 |
@@ -268,7 +279,6 @@
 | `get_repo_map` → 正常生成 | 未覆盖（可选路径，依赖 tree-sitter 安装状态） |
 | `grep_code` → rg 未安装 fallback | 未覆盖（容器环境已安装 rg） |
 | `grep_code` → timeout | 未覆盖（需构造大文件超时场景） |
-| `find_files` → 100 结果截断 | 未覆盖（需构造大量文件场景） |
 | `list_directory` → 500 行截断 | 未覆盖（需构造大量文件场景） |
 | `list_directory` → PermissionError | 未覆盖（需容器权限控制） |
 
@@ -301,7 +311,8 @@
 | `list_directory`: `target.is_dir()` 为 True/False | ✅ True: 已有; False: 用例 1 |
 | `list_directory`: `depth > max_depth` | ✅ 已有（max_depth=1 深度限制） |
 | `find_files`: `matches` 为空/非空 | ✅ 用例 2 / 🆕 用例 7.1 |
-| `find_files`: `len(matches) >= 100` | 未覆盖 |
+| `find_files`: `len(matches) >= 100` | ✅ 🆕 用例 7.2 |
+| `find_files`: `len(matches) == 100` 截断后缀 | ✅ 🆕 用例 7.2 |
 | `grep_code`: `result.returncode == 0/1/else` | ✅ 0: 间接; 1: 用例 3 |
 | `grep_code`: `FileNotFoundError` / `TimeoutExpired` | 未覆盖 |
 | `read_file`: `not exists` / `not is_file` / `PermissionError` | ✅ 用例 4, 5; PermissionError 未覆盖 |
@@ -318,7 +329,6 @@
 | --- | --- |
 | `grep_code` PyPI fallback 路径 | 容器环境已安装 ripgrep，`FileNotFoundError` 不可达 |
 | `grep_code` timeout 路径 | 需构造极大的工作区文件，不具实用性 |
-| `find_files` 100 结果截断 | 需构造 100+ 匹配文件场景 |
 | `list_directory` 500 行截断 | 需构造大量目录结构场景 |
 | `read_file` PermissionError | 需特定文件权限设置 |
 | `get_repo_map` 200 文件截断 | 需 200+ 可解析源文件场景 |
