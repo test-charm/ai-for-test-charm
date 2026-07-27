@@ -67,7 +67,7 @@ fi
 # Combine ALL .coverage-* files (chainlit + mcp, from all profiles)
 log_info "Combining all coverage data..."
 docker exec "$RUNNER" sh -c \
-  'rm -f /app/.coverage && /opt/venv/bin/coverage combine --keep /app/coverage/.coverage-*'
+  'rm -f /app/.coverage && /opt/venv/bin/coverage combine --keep /app/e2e-tests/coverage-output/.coverage-*'
 
 log_info "Coverage summary:"
 docker exec "$RUNNER" sh -c \
@@ -75,6 +75,6 @@ docker exec "$RUNNER" sh -c \
 
 log_info "Generating HTML report..."
 docker exec "$RUNNER" sh -c \
-  '/opt/venv/bin/coverage html -d /app/coverage/html'
+  '/opt/venv/bin/coverage html -d /app/e2e-tests/coverage-output/html'
 
 log_ok "HTML report: $COVERAGE_DIR/html/index.html"

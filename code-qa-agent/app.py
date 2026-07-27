@@ -120,5 +120,5 @@ async def on_message(message: cl.Message):
     if _coverage_data_file:
         try:
             _save_coverage()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to save coverage data: %s", e)
