@@ -204,7 +204,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 - 每个场景仅触发一个工具的**单一代码路径**
 - `_safe_path` 正常通过路径被覆盖，但 `ValueError` 路径已在 `chat_api.feature` "工具执行异常"场景覆盖
 - `_should_ignore` 🆕 已通过 "find_files过滤掉IGNORE_DIRS中的.git目录文件" 场景触发匹配路径
-- `_grep_fallback`（纯 Python fallback）路径未触发（容器已安装 ripgrep）
+- `_grep_fallback`（纯 Python fallback）已删除（容器必装 ripgrep，死代码）
 - C tracer (`branch=True`) 假阴性导致大量顺序执行行被标记为未覆盖
 
 **剩余未覆盖路径**（均为工具内部边界/异常分支）：
@@ -213,7 +213,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 |------|-----------|
 | `list_directory` | PermissionError 静默跳过（L52-53）、500 行截断（L74） |
 | `find_files` | 🆕 已全部覆盖（正常匹配、空结果、过滤、100截断） |
-| `grep_code` | ripgrep 错误退出（returncode > 1）、超时、纯 Python fallback、8000 字符截断 |
+| `grep_code` | ripgrep 错误退出（returncode > 1）、超时、🆕 file_glob 过滤、🆕 8000 字符截断 |
 | `read_file` | PermissionError |
 | `get_symbols` | 正常符号提取（依赖 tree-sitter）、不支持语言提示 |
 | `get_repo_map` | 200 文件截断、无可解析文件提示 |

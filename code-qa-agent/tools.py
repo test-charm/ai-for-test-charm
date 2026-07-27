@@ -1,4 +1,3 @@
-import re
 import subprocess
 from pathlib import Path
 
@@ -135,31 +134,8 @@ def grep_code(pattern: str, file_glob: str | None = None, path: str = ".") -> st
             return "No matches found."
         else:
             return f"Search error: {result.stderr[:500]}"
-    except FileNotFoundError:
-        return _grep_fallback(pattern, target, file_glob)
     except subprocess.TimeoutExpired:
         return "Search timed out (30s limit)."
-
-
-def _grep_fallback(pattern: str, target: Path, file_glob: str | None) -> str:
-    """Pure-Python fallback when ripgrep is not installed."""
-    regex = re.compile(pattern, re.IGNORECASE)
-    results: list[str] = []
-    glob_pattern = file_glob.replace("**/", "") if file_glob else "*"
-
-    for f in target.rglob(glob_pattern):
-        if not f.is_file() or _should_ignore(f):
-            continue
-        try:
-            for i, line in enumerate(f.read_text(errors="ignore").splitlines(), 1):
-                if regex.search(line):
-                    results.append(f"{f.relative_to(target)}:{i}:{line.rstrip()}")
-                    if len(results) >= settings.max_search_results:
-                        return "\n".join(results) + "\n... (limited)"
-        except (PermissionError, OSError):
-            continue
-
-    return "\n".join(results) if results else "No matches found."
 
 
 @tool

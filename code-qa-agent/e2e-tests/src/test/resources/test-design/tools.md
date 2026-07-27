@@ -69,7 +69,6 @@
   │   ├─ returncode == 0 ──→ stdout (截断 8000 字符)
   │   ├─ returncode == 1 ──→ "No matches found."
   │   └─ returncode > 1 ──→ "Search error: ..."
-  ├─ FileNotFoundError (rg 未安装) ──→ _grep_fallback 纯 Python 正则
   └─ TimeoutExpired ──→ "Search timed out (30s limit)."
 ```
 
@@ -277,8 +276,11 @@
 | `read_file` → 正常读取 | ✅ 已有：chat_api.feature "模型连续多次工具调用" 的 read_file |
 | `get_symbols` → 正常提取 | ✅ 已有：agent 内部首轮未直接测试，但可通过新用例 6 间接覆盖 |
 | `get_repo_map` → 正常生成 | 未覆盖（可选路径，依赖 tree-sitter 安装状态） |
-| `grep_code` → rg 未安装 fallback | 未覆盖（容器环境已安装 rg） |
+| `grep_code` → rg 未安装 fallback | 💀 已删除（死代码，容器必装 rg） |
 | `grep_code` → timeout | 未覆盖（需构造大文件超时场景） |
+| `grep_code` → returncode > 1 错误 | 🆕 用例：grep_code使用非法正则返回搜索错误 |
+| `grep_code` → file_glob 传值 | 🆕 用例：grep_code使用file_glob过滤Python文件 |
+| `grep_code` → 8000 字符截断 | 🆕 用例：grep_code大量匹配结果触发8000字符截断 |
 | `list_directory` → 500 行截断 | 未覆盖（需构造大量文件场景） |
 | `list_directory` → PermissionError | 未覆盖（需容器权限控制） |
 
@@ -327,7 +329,6 @@
 
 | 缺口 | 原因 |
 | --- | --- |
-| `grep_code` PyPI fallback 路径 | 容器环境已安装 ripgrep，`FileNotFoundError` 不可达 |
 | `grep_code` timeout 路径 | 需构造极大的工作区文件，不具实用性 |
 | `list_directory` 500 行截断 | 需构造大量目录结构场景 |
 | `read_file` PermissionError | 需特定文件权限设置 |
