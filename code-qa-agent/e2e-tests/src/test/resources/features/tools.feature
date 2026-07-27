@@ -698,6 +698,69 @@
 
   Rule: Read file
 
+    场景: read_file读取正常文件返回内容
+      假如Mock API:
+        """
+        POST: '/v1/chat/completions'
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: tool_calls
+            message: {
+              toolCalls!: [{
+                function: {
+                  name: read_file
+                  arguments: ```
+                             {"file_path": "gradle.properties"}
+                             ```
+                }
+              }]
+            }
+          }]
+        }
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: stop
+            message: {
+              content: 'read_file结果：文件内容如下。'
+            }
+          }]
+        }
+        """
+      当用户发送消息"test read_file not found"
+      那么收到的 Socket.IO 事件应满足:
+        """
+        ::eventually: {
+          receivedEvents::filter: {
+            name= new_message
+          } : [ ... {
+            data.output: ```
+                         read_file结果：文件内容如下。
+
+                         ---
+                         ⏱️ 耗时 0秒
+                         ```
+          }]
+        }
+        """
+      并且数据应为:
+        """
+        MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+          body.json: {
+            messages: [... {
+              content: ```
+                       ── gradle.properties (1-2 of 2 lines) ──
+                          1 │ org.gradle.java.installations.auto-detect=true
+                          2 │ org.gradle.java.installations.auto-download=true
+                       ```
+              role: tool
+              tool_call_id: read_file-0
+            }]
+          }
+        }]
+        """
+
     场景: read_file读取不存在文件返回错误
       假如Mock API:
         """
@@ -770,7 +833,7 @@
                 function: {
                   name: read_file
                   arguments: ```
-                             {"file_path": "code-qa-agent"}
+                             {"file_path": "jfactory"}
                              ```
                 }
               }]
@@ -808,7 +871,68 @@
         MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
           body.json: {
             messages: [... {
-              content: 'File not found: code-qa-agent'
+              content: 'Not a file: jfactory'
+              role: tool
+              tool_call_id: read_file-0
+            }]
+          }
+        }]
+        """
+
+    场景: read_file读取正常文件结果触发300行字符截断
+      假如Mock API:
+        """
+        POST: '/v1/chat/completions'
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: tool_calls
+            message: {
+              toolCalls!: [{
+                function: {
+                  name: read_file
+                  arguments: ```
+                             {"file_path": "jfactory/README.md"}
+                             ```
+                }
+              }]
+            }
+          }]
+        }
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: stop
+            message: {
+              content: 'read_file结果：文件内容如下。'
+            }
+          }]
+        }
+        """
+      当用户发送消息"test read_file not found"
+      那么收到的 Socket.IO 事件应满足:
+        """
+        ::eventually: {
+          receivedEvents::filter: {
+            name= new_message
+          } : [ ... {
+            data.output: ```
+                         read_file结果：文件内容如下。
+
+                         ---
+                         ⏱️ 耗时 0秒
+                         ```
+          }]
+        }
+        """
+      并且数据应为:
+        """
+        MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+          body.json: {
+            messages: [... {
+              content::should.endsWith: ```
+                                        ── Use read_file('jfactory/README.md', start_line=301) to continue ──
+                                        ```
               role: tool
               tool_call_id: read_file-0
             }]
