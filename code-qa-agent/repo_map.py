@@ -10,65 +10,25 @@ except ImportError:
     TREE_SITTER_AVAILABLE = False
 
 EXTENSION_TO_LANG: dict[str, str] = {
-    ".py": "python",
-    ".js": "javascript",
-    ".jsx": "javascript",
-    ".ts": "typescript",
-    ".tsx": "tsx",
     ".java": "java",
-    ".go": "go",
-    ".rs": "rust",
-    ".rb": "ruby",
-    ".cpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
-    ".c": "c",
-    ".h": "c",
-    ".hpp": "cpp",
-    ".cs": "c_sharp",
-    ".kt": "kotlin",
-    ".kts": "kotlin",
-    ".scala": "scala",
-    ".swift": "swift",
-    ".php": "php",
-    ".sh": "bash",
-    ".lua": "lua",
-    ".r": "r",
-    ".R": "r",
 }
 
 # AST node types that represent "interesting" symbols
 _SYMBOL_NODE_TYPES = frozenset(
     {
-        # Functions
-        "function_definition",
-        "function_declaration",
-        "method_definition",
         "method_declaration",
         "constructor_declaration",
-        "arrow_function",
-        "function_item",  # Rust
-        # Classes / types
-        "class_definition",
         "class_declaration",
         "class_body",
         "interface_declaration",
         "enum_declaration",
-        "enum_definition",
-        "struct_item",  # Rust
-        "struct_declaration",
-        "type_declaration",
-        "trait_item",  # Rust
-        "impl_item",  # Rust
-        "module_declaration",
-        "object_declaration",  # Kotlin
-        "annotation_type_declaration",  # Java @interface
+        "annotation_type_declaration",
     }
 )
 
 # Node types that carry the "name" of a symbol
 _NAME_NODE_TYPES = frozenset(
-    {"identifier", "property_identifier", "type_identifier", "name"}
+    {"identifier", "type_identifier"}
 )
 
 
@@ -148,14 +108,9 @@ def _find_name(node, source: bytes) -> str | None:
 
 
 def _simplify_type(node_type: str) -> str:
-    # Check "constructor" before label loop — "struct" is a substring of "constructor"
     if "constructor" in node_type:
         return "constructor"
-    for label in ("class", "interface", "enum", "struct", "trait", "impl", "module", "annotation", "object"):
+    for label in ("class", "interface", "enum", "annotation"):
         if label in node_type:
             return label
-    if "method" in node_type:
-        return "method"
-    if "function" in node_type:
-        return "function"
-    return node_type
+    return "method"
