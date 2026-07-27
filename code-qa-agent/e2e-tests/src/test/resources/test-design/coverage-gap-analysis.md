@@ -51,7 +51,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | ~~**L54-55**~~ | ~~`isinstance(block, str)` 分支~~ | ✅ 已删除死代码 — LangChain 永远返回 dict，裸字符串分支不可达 |
 | ~~**L102-103**~~ | ~~`load_system_prompt` 文件不存在~~ | ✅ 已删除死代码 — `system_prompt.md` 随仓库存在，不可达 |
 | ~~**L105-106**~~ | ~~`load_system_prompt` 文件为空~~ | ✅ 已删除死代码 — 同上 |
-| **L293** | 硬编码 `result[:4000]` 截断 | 🆕 已改为可配置 `settings.max_tool_result_chars`（默认 16000），环境变量 `CQA_MAX_TOOL_RESULT_CHARS` 可覆盖 |
+| **L293** | 硬编码 `result[:4000]` 截断 | 🆕 已改为可配置 `settings.max_tool_result_chars`（默认 500000），环境变量 `CQA_MAX_TOOL_RESULT_CHARS` 可覆盖 |
 | **L322** | `ask()` 传入显式 `thread_id` | 仅 MCP 路径走到 `thread_id=None` 分支 |
 
 ### 🟡 其他 profile 未覆盖（非死代码）
@@ -119,7 +119,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 | 行号 | 代码 | 说明 |
 |------|------|------|
-| **L12** | `max_tool_result_chars: int = 16000` | 工具结果截断上限，替换了 `agent.py:293` 的硬编码 4000。可通过 `CQA_MAX_TOOL_RESULT_CHARS` 环境变量覆盖。 |
+| **L12** | `max_tool_result_chars: int = 500000` | 工具结果截断上限，替换了 `agent.py:293` 的硬编码 4000。可通过 `CQA_MAX_TOOL_RESULT_CHARS` 环境变量覆盖。 |
 
 ### 🟡 非死代码，但不需要单独测
 
@@ -218,7 +218,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | `grep_code` | ripgrep 错误退出（returncode > 1）、超时、🆕 file_glob 过滤、🆕 8000 字符截断 |
 | `read_file` | PermissionError |
 | `get_symbols` | 🆕 已覆盖正常提取（用例：get_symbols分析存在文件正常返回内容）、不支持语言提示（用例：get_symbols分析存在文件但类型不支持）。仅剩 extract_symbols 返回空（非"不支持语言"路径）未覆盖——需 tree-sitter 解析失败或文件无符号场景 |
-| `get_repo_map` | 🆕 已覆盖无可解析文件提示（用例：get_repo_map带glob过滤）；200 文件截断仍未覆盖 |
+| `get_repo_map` | 🆕 已覆盖无可解析文件提示（用例：get_repo_map带glob过滤）；🆕 已覆盖 200 文件截断（用例：get_repo_map带glob过滤存在文件匹配触发200个文件数限制） |
 
 ---
 
@@ -234,7 +234,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 |------|------|
 | `detect_language()` | 20+ 语言的文件扩展名映射，e2e 工作区仅含 Python/Java/Gradle 文件 |
 | `extract_symbols()` | tree-sitter 解析器初始化、各语言 AST 遍历逻辑 |
-| 边界逻辑 | 200 文件截断、空目录/无可解析文件提示 |
+| 边界逻辑 | 🆕 200 文件截断、空目录/无可解析文件提示均已覆盖 |
 
 ---
 

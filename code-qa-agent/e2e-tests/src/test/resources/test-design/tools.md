@@ -263,7 +263,7 @@
 - **输入**：`pattern="**/*.java"`
 - **预期输出**：工具返回 100 行文件路径 + `\n... (limited to 100 results)`
 - **Agent 行为**：正常完成循环
-- **验证方式**：DAL 正则匹配 `content = /.*\(limited to 100 results\)/`。DAL-java 的 RegexNode 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，全串必须匹配。此前 `agent.py:293` 硬编码 4000 字符截断导致 ToolMessage 被截断，现已改为可配置的 `max_tool_result_chars`（默认 16000，环境变量 `CQA_MAX_TOOL_RESULT_CHARS`），确保完整结果送达 LLM/MockServer。
+- **验证方式**：DAL 正则匹配 `content = /.*\(limited to 100 results\)/`。DAL-java 的 RegexNode 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，全串必须匹配。此前 `agent.py:293` 硬编码 4000 字符截断导致 ToolMessage 被截断，现已改为可配置的 `max_tool_result_chars`（默认 500000，环境变量 `CQA_MAX_TOOL_RESULT_CHARS`），确保完整结果送达 LLM/MockServer。
 - **覆盖目标**：L94-95（`>= 100` break）、L101-102（`== 100` 截断后缀）。至此 find_files 全部代码路径已覆盖。
 
 #### 9. get_repo_map 带 glob 过滤
@@ -272,6 +272,15 @@
 - **输入**：`file_glob="**/*.py"`
 - **预期输出**：符号索引为空（工作区不含 Python 源文件，tree-sitter 已安装但无可解析文件），返回 "No parseable source files found"
 - **Agent 行为**：正常完成循环
+
+#### 10. get_repo_map 带 glob 过滤存在文件匹配触发 200 个文件数限制 🆕
+
+- **最短路径**：`_safe_path` 通过 → glob 匹配 `**/*.java`（757 文件）→ `detect_language` 命中 Java → `extract_symbols` 提取符号 → `file_count >= 200` → break → 追加 `\n... (limited to 200 files)`
+- **输入**：`file_glob="**/*.java"`
+- **预期输出**：200 个文件的符号索引 + `\n... (limited to 200 files)`
+- **Agent 行为**：正常完成循环，LLM 返回 "get_repo_map结果：符号索引完成。"
+- **验证方式**：`content::should.endsWith` 验证 ToolMessage 以 `... (limited to 200 files)` 结尾。200 个 Java 文件的符号索引输出约 20 万字符，`max_tool_result_chars` 默认 500000 保证不被截断。
+- **覆盖目标**：`repo_map.py` L246-248（`file_count >= 200` break + 截断后缀）。
 
 ## 覆盖性检查
 
@@ -342,7 +351,7 @@
 | `read_file`: `end_line < total` | ✅ 已有 |
 | `get_symbols`: `not is_file` / `lang is None` / `symbols 为空` | ✅ is_file: 用例 8; 🆕 lang None: 用例 7; 其他已有 |
 | `get_repo_map`: `result_lines` 为空 | 未覆盖 |
-| `get_repo_map`: `file_count >= 200` | 未覆盖 |
+| `get_repo_map`: `file_count >= 200` | ✅ 🆕 用例 10 |
 | `get_repo_map`: `_should_ignore` / `detect_language` | ✅ 已有 |
 
 ### 4. 已知缺口
@@ -352,7 +361,7 @@
 | `grep_code` timeout 路径 | 需构造极大的工作区文件，不具实用性 |
 | `list_directory` 500 行截断 | 需构造大量目录结构场景 |
 | `read_file` PermissionError | 需特定文件权限设置 |
-| `get_repo_map` 200 文件截断 | 需 200+ 可解析源文件场景 |
+| ~~`get_repo_map` 200 文件截断~~ | ✅ 🆕 用例 10 已覆盖 |
 | `get_repo_map` 无文件返回 | 已在用例 9 覆盖（工作区无 Python 文件，tree-sitter 已安装） |
 | `get_symbols` extract_symbols 返回空（非"类型不支持"路径） | 需 tree-sitter 解析失败或文件无符号场景。用例 6 已验证正常提取路径，用例 7 已验证不支持类型路径，仅剩解析异常/空文件等极端路径未覆盖 |
 
