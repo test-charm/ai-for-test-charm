@@ -123,7 +123,7 @@
 | `file_path` (read_file) | read_file | 存在的文件；不存在的文件；目录路径 | |
 | `start_line` (read_file) | read_file | 不传(默认1)；显式值 | |
 | `end_line` (read_file) | read_file | 不传(None)；显式值 | |
-| `file_path` (get_symbols) | get_symbols | 存在的 Python 文件；不存在的文件 | |
+| `file_path` (get_symbols) | get_symbols | 存在的 Java 文件；不支持类型的文件；不存在的文件 | |
 | `file_glob` (get_repo_map) | get_repo_map | 不传(None)；"**/*.py" | 控制解析的文件范围 |
 
 ## 输出因子
@@ -175,9 +175,11 @@
 | grep_code无匹配时返回空结果 | grep_code | `pattern="ZZZ_NONEXISTENT_PATTERN"` | tool_calls(grep_code nonexistent pattern) → 最终回答 | LLM 请求中 ToolMessage 含 "No matches found." |
 | read_file读取不存在文件返回错误 | read_file | `file_path="nonexistent.txt"` | tool_calls(read_file nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.txt" |
 | read_file读取目录路径返回错误 | read_file | `file_path="code-qa-agent"` | tool_calls(read_file directory) → 最终回答 | LLM 请求中 ToolMessage 含 "Not a file: code-qa-agent" |
+| find_files过滤掉IGNORE_DIRS中的.git目录文件 | find_files | `pattern="**/HEAD"` | tool_calls(find_files **/HEAD) → 最终回答 | `.git/HEAD` 被 `_should_ignore` 过滤，ToolMessage 含 "No files found matching: **/HEAD" |
+| get_symbols分析存在文件正常返回内容 🆕 | get_symbols | `file_path="jfactory/src/.../CollectorInDAL.java"` | tool_calls(get_symbols on CollectorInDAL.java) → 最终回答 | LLM 请求中 ToolMessage 含 `class CollectorInDAL (L15-84)`，验证符号提取正常路径 |
+| get_symbols分析存在文件但类型不支持 🆕 | get_symbols | `file_path="build.gradle"` | tool_calls(get_symbols on build.gradle) → 最终回答 | LLM 请求中 ToolMessage 含 "Unsupported language for: build.gradle" |
 | get_symbols分析不存在文件返回错误 | get_symbols | `file_path="nonexistent.py"` | tool_calls(get_symbols nonexistent) → 最终回答 | LLM 请求中 ToolMessage 含 "File not found: nonexistent.py" |
-| find_files过滤掉IGNORE_DIRS中的.git目录文件 | find_files | `pattern="**/HEAD"` | tool_calls(find_files **/HEAD) → 最终回答 | `.git/HEAD` 真实存在但被 `_should_ignore` 过滤，ToolMessage 含 "No files found matching: **/HEAD" |
-| get_repo_map带glob过滤只分析Python文件 | get_repo_map | `file_glob="**/*.py"` | tool_calls(get_repo_map with glob) → 最终回答 | LLM 请求中 ToolMessage 不含 Java/gradle 文件符号 |
+| get_repo_map带glob过滤只分析Python文件 | get_repo_map | `file_glob="**/*.py"` | tool_calls(get_repo_map with glob) → 最终回答 | LLM 请求中 ToolMessage 含 "No parseable source files found"（tree-sitter 已安装但工作区不含 Python 文件） |
 
 ### 用例详情
 
@@ -216,7 +218,23 @@
 - **预期输出**：工具返回 "Not a file: code-qa-agent"
 - **Agent 行为**：正常完成循环
 
-#### 6. get_symbols 分析不存在文件返回错误
+#### 6. get_symbols 分析存在文件正常返回内容 🆕
+
+- **最短路径**：`_safe_path` 通过 → `is_file()` True → `extract_symbols` 成功 → 返回符号列表
+- **输入**：`file_path="jfactory/src/main/java/org/testcharm/extensions/dal/CollectorInDAL.java"`
+- **预期输出**：工具返回 12 行符号信息，以 `class CollectorInDAL (L15-84)` 开头
+- **Agent 行为**：正常完成循环
+- **覆盖目标**：L188 `is_file()` True → L192 `extract_symbols` 调用 → L193 `not symbols` False → L199-205 符号拼接返回。这是 `get_symbols` 核心正常路径。
+
+#### 7. get_symbols 分析存在文件但类型不支持 🆕
+
+- **最短路径**：`_safe_path` 通过 → `is_file()` True → `extract_symbols` 返回 []（`detect_language` 不支持 `.gradle`）→ L195 `not lang` → 返回错误
+- **输入**：`file_path="build.gradle"`（Gradle 文件，tree-sitter 不支持）
+- **预期输出**：工具返回 "Unsupported language for: build.gradle"
+- **Agent 行为**：正常完成循环
+- **覆盖目标**：L194-196：`detect_language` 返回 None → `"Unsupported language"` 路径
+
+#### 8. get_symbols 分析不存在文件返回错误
 
 - **最短路径**：`_safe_path` 通过 → `not is_file` → 错误
 - **输入**：`file_path="nonexistent.py"`
@@ -248,11 +266,11 @@
 - **验证方式**：DAL 正则匹配 `content = /.*\(limited to 100 results\)/`。DAL-java 的 RegexNode 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，全串必须匹配。此前 `agent.py:293` 硬编码 4000 字符截断导致 ToolMessage 被截断，现已改为可配置的 `max_tool_result_chars`（默认 16000，环境变量 `CQA_MAX_TOOL_RESULT_CHARS`），确保完整结果送达 LLM/MockServer。
 - **覆盖目标**：L94-95（`>= 100` break）、L101-102（`== 100` 截断后缀）。至此 find_files 全部代码路径已覆盖。
 
-#### 8. get_repo_map 带 glob 过滤
+#### 9. get_repo_map 带 glob 过滤
 
 - **最短路径**：正常遍历，通过 glob 过滤文件
 - **输入**：`file_glob="**/*.py"`
-- **预期输出**：符号索引只含 Python 文件（不含 Java/gradle 文件）
+- **预期输出**：符号索引为空（工作区不含 Python 源文件，tree-sitter 已安装但无可解析文件），返回 "No parseable source files found"
 - **Agent 行为**：正常完成循环
 
 ## 覆盖性检查
@@ -268,8 +286,10 @@
 | `grep_code` → rg returncode == 1 | ✅ 用例 3 |
 | `read_file` → not exists | ✅ 用例 4 |
 | `read_file` → not is_file (目录) | ✅ 用例 5 |
-| `get_symbols` → not is_file | ✅ 用例 6 |
-| `get_repo_map` → file_glob 过滤 | ✅ 用例 8 |
+| `get_symbols` → not is_file | ✅ 用例 8 |
+| `get_symbols` → 正常提取符号 🆕 | ✅ 用例 6 |
+| `get_symbols` → detect_language 返回 None (不支持类型) 🆕 | ✅ 用例 7 |
+| `get_repo_map` → file_glob 过滤 | ✅ 用例 9 |
 | `_safe_path` → ValueError (path traversal) | ✅ 已有：chat_api.feature "工具执行异常" |
 | `_execute_tool` → Unknown tool | ✅ 已有：chat_api.feature "调用未知工具" |
 | `list_directory` → 正常目录树（首轮注入） | ✅ 已有：所有 chat_api 场景 |
@@ -320,7 +340,7 @@
 | `read_file`: `not exists` / `not is_file` / `PermissionError` | ✅ 用例 4, 5; PermissionError 未覆盖 |
 | `read_file`: `end_line is None` / explicit | ✅ None: 已有; explicit: 未覆盖 |
 | `read_file`: `end_line < total` | ✅ 已有 |
-| `get_symbols`: `not is_file` / `lang is None` / `symbols 为空` | ✅ is_file: 用例 6; 其他已有 |
+| `get_symbols`: `not is_file` / `lang is None` / `symbols 为空` | ✅ is_file: 用例 8; 🆕 lang None: 用例 7; 其他已有 |
 | `get_repo_map`: `result_lines` 为空 | 未覆盖 |
 | `get_repo_map`: `file_count >= 200` | 未覆盖 |
 | `get_repo_map`: `_should_ignore` / `detect_language` | ✅ 已有 |
@@ -333,7 +353,8 @@
 | `list_directory` 500 行截断 | 需构造大量目录结构场景 |
 | `read_file` PermissionError | 需特定文件权限设置 |
 | `get_repo_map` 200 文件截断 | 需 200+ 可解析源文件场景 |
-| `get_repo_map` 无文件返回 | 需空目录或仅含不可解析文件 |
+| `get_repo_map` 无文件返回 | 已在用例 9 覆盖（工作区无 Python 文件，tree-sitter 已安装） |
+| `get_symbols` extract_symbols 返回空（非"类型不支持"路径） | 需 tree-sitter 解析失败或文件无符号场景。用例 6 已验证正常提取路径，用例 7 已验证不支持类型路径，仅剩解析异常/空文件等极端路径未覆盖 |
 
 ## 实现说明
 

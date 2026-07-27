@@ -1003,7 +1003,7 @@
 
   Rule: Get symbols
 
-    场景: get_symbols分析存在文件但类型不支持
+    场景: get_symbols分析存在文件正常返回内容
       假如Mock API:
         """
         POST: '/v1/chat/completions'
@@ -1016,7 +1016,7 @@
                 function: {
                   name: get_symbols
                   arguments: ```
-                             {"file_path": "build.gradle"}
+                             {"file_path": "jfactory/src/main/java/org/testcharm/extensions/dal/CollectorInDAL.java"}
                              ```
                 }
               }]
@@ -1054,7 +1054,80 @@
         MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
           body.json: {
             messages: [... {
-              content: *
+              content: ```
+                       class CollectorInDAL (L15-84): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
+                           class extend (L15-84): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
+                           method extend (L17-70): @Override
+                           class Object (L25-30): .registerPropertyAccessor(Collector.class, new PropertyAccessor<Collector>() {
+                           method Object (L26-29): @Override
+                           class Collector (L37-42): return new InfiniteDALCollection<Collector>(Collector::new) {
+                           method Collector (L38-41): @Override
+                           class match (L46-58): .registerOperator(Operators.EQUAL, new Operation<JFactoryCollector, ExpectationFactory>() {
+                           method match (L47-50): @Override
+                           method operateData (L52-57): @Override
+                           method verificationOptAsAssignmentOpt (L72-83): private Optional<Checker> verificationOptAsAssignmentOpt(Data<?> actual) {
+                           class failed (L74-81): return Optional.of(new Checker() {
+                           method failed (L75-80): @Override
+                       ```
+              role: tool
+              tool_call_id: get_symbols-0
+            }]
+          }
+        }]
+        """
+
+    场景: get_symbols分析存在文件但类型不支持
+      假如Mock API:
+        """
+        POST: '/v1/chat/completions'
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: tool_calls
+            message: {
+              toolCalls!: [{
+                function: {
+                  name: get_symbols
+                  arguments: ```
+                             {"file_path": "build.gradle"}
+                             ```
+                }
+              }]
+            }
+          }]
+        }
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: stop
+            message: {
+              content: 'get_symbols结果：该文件类型不支持符号索引。'
+            }
+          }]
+        }
+        """
+      当用户发送消息"test get_symbols not found"
+      那么收到的 Socket.IO 事件应满足:
+        """
+        ::eventually: {
+          receivedEvents::filter: {
+            name= new_message
+          } : [ ... {
+            data.output: ```
+                         get_symbols结果：该文件类型不支持符号索引。
+
+                         ---
+                         ⏱️ 耗时 0秒
+                         ```
+          }]
+        }
+        """
+      并且数据应为:
+        """
+        MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+          body.json: {
+            messages: [... {
+              content: 'Unsupported language for: build.gradle'
               role: tool
               tool_call_id: get_symbols-0
             }]

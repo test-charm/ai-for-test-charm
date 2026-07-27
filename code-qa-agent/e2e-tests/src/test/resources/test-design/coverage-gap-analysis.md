@@ -195,8 +195,10 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
 | `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
 | `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
+| `get_symbols` | get_symbols分析存在文件正常返回内容 🆕 | 正常符号提取路径（is_file → extract_symbols → 符号列表拼接） |
+| `get_symbols` | get_symbols分析存在文件但类型不支持 🆕 | `detect_language` None → `"Unsupported language"` |
 | `get_symbols` | get_symbols分析不存在文件返回错误 | `not is_file` → `"File not found"` |
-| `get_repo_map` | get_repo_map带glob过滤 | `file_glob="**/*.py"` → 过滤后符号索引 |
+| `get_repo_map` | get_repo_map带glob过滤 | `file_glob="**/*.py"` → 无可解析文件，返回 "No parseable source files found" |
 
 ### 覆盖率限制
 
@@ -215,8 +217,8 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | `find_files` | 🆕 已全部覆盖（正常匹配、空结果、过滤、100截断） |
 | `grep_code` | ripgrep 错误退出（returncode > 1）、超时、🆕 file_glob 过滤、🆕 8000 字符截断 |
 | `read_file` | PermissionError |
-| `get_symbols` | 正常符号提取（依赖 tree-sitter）、不支持语言提示 |
-| `get_repo_map` | 200 文件截断、无可解析文件提示 |
+| `get_symbols` | 🆕 已覆盖正常提取（用例：get_symbols分析存在文件正常返回内容）、不支持语言提示（用例：get_symbols分析存在文件但类型不支持）。仅剩 extract_symbols 返回空（非"不支持语言"路径）未覆盖——需 tree-sitter 解析失败或文件无符号场景 |
+| `get_repo_map` | 🆕 已覆盖无可解析文件提示（用例：get_repo_map带glob过滤）；200 文件截断仍未覆盖 |
 
 ---
 
@@ -224,7 +226,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ### 🆕 更新
 
-`get_repo_map` 工具已通过 `tools.feature` 的 "get_repo_map带glob过滤" 场景被实际调用（`file_glob="**/*.py"`），但 tree-sitter AST 解析的大部分内部逻辑仍未覆盖——`detect_language`、`extract_symbols` 等核心函数仅在工具被调用时作为依赖执行，其内部分支覆盖极低。
+`get_repo_map` 工具已通过 `tools.feature` 的 "get_repo_map带glob过滤" 场景被实际调用（`file_glob="**/*.py"`），覆盖了空结果返回路径（`"No parseable source files found"`）。tree-sitter AST 解析的大部分内部逻辑仍未覆盖——`detect_language`、`extract_symbols` 等核心函数仅在工具被调用时作为依赖执行，其内部分支覆盖极低。`get_symbols` 的正常提取路径也通过新增的 "get_symbols分析存在文件正常返回内容" 场景获得覆盖。
 
 ### 未覆盖路径
 
