@@ -9,7 +9,7 @@ log_info() {
 
 . "${VENV_DIR:-/opt/venv}/bin/activate"
 
-log_info "Starting MCP server with coverage"
+log_info "Starting MCP server with coverage and hot-reload"
 export COVERAGE_DATA_FILE="${COVERAGE_DATA_FILE:-/app/e2e-tests/coverage-output/.coverage-mcp}"
 export COVERAGE_RCFILE="${COVERAGE_RCFILE:-/app/.coveragerc}"
-exec python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 3001
+exec watchfiles --filter python 'python mcp_server.py --transport streamable-http --host 0.0.0.0 --port 3001' /app

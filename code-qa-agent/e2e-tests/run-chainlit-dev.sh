@@ -12,7 +12,7 @@ log_info() {
 log_info "Initializing database"
 cd /app && python init_db.py
 
-log_info "Starting Chainlit with coverage"
+log_info "Starting Chainlit with coverage and hot-reload"
 export COVERAGE_DATA_FILE="${COVERAGE_DATA_FILE:-/app/e2e-tests/coverage-output/.coverage-chainlit}"
 export COVERAGE_RCFILE="${COVERAGE_RCFILE:-/app/.coveragerc}"
-exec chainlit run app.py --host 0.0.0.0 --port 8000
+exec watchfiles --filter python 'chainlit run app.py --host 0.0.0.0 --port 8000' /app
