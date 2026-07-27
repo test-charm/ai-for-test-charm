@@ -154,17 +154,17 @@ e2e 测试位于 `e2e-tests/`，是 Java Cucumber 项目，通过 HTTP/WebSocket
 cd e2e-tests
 
 # 默认模型（mock-gpt），tool_choice=required
-docker compose --profile default up -d
+docker compose --profile default up -d --build --wait
 ./gradlew cucumber -Ptags='not @deepseek-model and not @anthropic-provider'
 
 # DeepSeek 模型（mock-deepseek-chat），tool_choice=auto
 docker compose --profile default down
-docker compose --profile deepseek up -d
+docker compose --profile deepseek up -d --build --wait
 ./gradlew cucumber -Ptags='@deepseek-model'
 
 # Anthropic 提供者（mock-claude），tool_choice=any
 docker compose --profile deepseek down
-docker compose --profile anthropic up -d
+docker compose --profile anthropic up -d --build --wait
 ./gradlew cucumber -Ptags='@anthropic-provider'
 ```
 
@@ -188,17 +188,17 @@ docker compose --profile anthropic up -d
 cd e2e-tests
 
 # 1. 默认模型测试
-docker compose --profile default up -d
+docker compose --profile default up -d --build --wait
 ./gradlew cucumber -Ptags='not @deepseek-model'
 
 # 2. DeepSeek 模型测试
 docker compose --profile default down
-docker compose --profile deepseek up -d
+docker compose --profile deepseek up -d --build --wait
 ./gradlew cucumber -Ptags='@deepseek-model'
 
 # 3. Anthropic 提供者测试
 docker compose --profile deepseek down
-docker compose --profile anthropic up -d
+docker compose --profile anthropic up -d --build --wait
 ./gradlew cucumber -Ptags='@anthropic-provider'
 
 # 4. 合并所有覆盖率数据

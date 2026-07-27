@@ -152,6 +152,67 @@
         }]
         """
 
+    场景: list_directory正常返回文件列表结果超过500行屏蔽
+      假如Mock API:
+        """
+        POST: '/v1/chat/completions'
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: tool_calls
+            message: {
+              toolCalls!: [{
+                function: {
+                  name: list_directory
+                  arguments: ```
+                             {"path": ".","max_depth": 100}
+                             ```
+                }
+              }]
+            }
+          }]
+        }
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: stop
+            message: {
+              content: 'list_directory结果：处理完成。'
+            }
+          }]
+        }
+        """
+      当用户发送消息"test list_directory normal match"
+      那么收到的 Socket.IO 事件应满足:
+        """
+        ::eventually: {
+          receivedEvents::filter: {
+            name= new_message
+          } : [ ... {
+            data.output: ```
+                         list_directory结果：处理完成。
+
+                         ---
+                         ⏱️ 耗时 0秒
+                         ```
+          }]
+        }
+        """
+      并且数据应为:
+        """
+        MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+          body.json: {
+            messages: [... {
+              content::should.endsWith: ```
+                                        more entries truncated)
+                                        ```
+              role: tool
+              tool_call_id: list_directory-0
+            }]
+          }
+        }]
+        """
+
   Rule: Find files
 
     场景: find_files正常匹配返回文件列表
