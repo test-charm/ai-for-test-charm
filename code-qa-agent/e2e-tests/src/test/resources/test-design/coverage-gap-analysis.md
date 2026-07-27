@@ -1,9 +1,10 @@
 # 覆盖率缺口分析
 
-> 基于 `e2e-tests/coverage-output/html/index.html`，上次全量收集 2026-07-25  
-> 🆕 **2026-07-26 新增 `tools.feature`（10 场景），覆盖 tools.py 全部 6 个工具的调用路径、`_should_ignore` 过滤逻辑、find_files 正常匹配路径及 100 结果截断**  
-> 全量测试 default profile 最新数据  
-> 总覆盖率：53%（555 语句中 316 覆盖，200 分支中 46 覆盖）
+> 基于 `e2e-tests/coverage-output/html/index.html`，上次全量收集 2026-07-27  
+> 🆕 **2026-07-27 全量测试 default profile 最新数据**  
+> 总覆盖率：66%（687 语句中 447 覆盖，238 分支中 161 覆盖）  
+> 🆕 **tools.py：27% → 95%**（146/154 语句，59/62 分支）—— 全部 6 个工具 + 内部边界均已覆盖  
+> 🆕 **repo_map.py：13% → 91%**（51/56 语句，27/28 分支）—— tree-sitter 解析路径全覆盖
 > 
 > ⚠️ **关于 C tracer 假阴性**：因 `branch=True`，coverage.py 使用 C tracer（arc 级记录），它**不逐行记录纯顺序执行的代码**（如模块级 `import`、`logging.basicConfig`、模块级变量赋值、`def` 定义行、`if __name__ == "__main__"` 等）。这些行虽然被执行，但在报告中被标记为未覆盖。这并非真实的覆盖率缺口，而是 C tracer 的粒度限制。**移除 `branch=True` 将导致 Python tracer 无法正确处理 asyncio/FastMCP/Chainlit 等异步框架，覆盖率全面崩塌，不可行。**
 > 
@@ -13,23 +14,23 @@
 
 ```
                   覆盖率      未覆盖语句   部分/未覆盖分支   关键缺口
-agent.py    █████████░ 100%    0            4+4            仅剩 C tracer 假阴性、仅 MCP 路径未覆盖的 ask() 分支
-app.py      ████░░░░░░  45%   44            6+10           coverage bootstrap + 会话恢复 + 长耗时分支
-config.py   █████████░  96%    1            0              database_sync_url
-mcp_server  █████░░░░░  52%   30            3+9            coverage bootstrap + CLI入口 + fallback
-| tools.py    | ███░░░░░░░  27%   117           3+72           🆕 全部 6 个工具均被 e2e 调用（tools.feature），内部边界分支覆盖率有限 |
-| repo_map.py | █░░░░░░░░░  13%    48            0+32          🆕 get_repo_map 已被 tools.feature 调用，tree-sitter 内部分支覆盖率极低 |
-init_db.py  ░░░░░░░░░░   0%    27            0+8           未在 e2e 中运行
-migrate_*.py░░░░░░░░░░   0%   126            0+44          未在 e2e 中运行
+agent.py    █████████░  98%    0            4+4            仅剩 C tracer 假阴性、仅 MCP 路径未覆盖的 ask() 分支
+app.py      ████░░░░░░  50%   43            4+8            coverage bootstrap + 长耗时分支
+config.py   █████████░  96%    1            0+0            database_sync_url
+mcp_server  █████░░░░░  49%   30            3+9            coverage bootstrap + CLI入口 + fallback
+tools.py    █████████░  95%    8            3+3            🆕 仅剩 PermissionError/截断/超时等边界异常
+repo_map.py █████████░  93%    5            1+1            🆕 仅剩 tree-sitter 未安装 fallback + C tracer 假阴性
+init_db.py  ░░░░░░░░░░   0%   27            0+8           未在 e2e 中运行
+migrate_*.py░░░░░░░░░░   0%  126            0+44          未在 e2e 中运行
 ```
 
-> 注：数字基于 `e2e-tests/coverage-output/html/status.json`。agent.py 语句覆盖率已达 100%（156 语句中 0 未覆盖），仅剩 4 个 partial + 4 个 missing branch。app.py 总覆盖率 45%（语句+分支综合），32/76 语句覆盖。`tools.py` 27%（173 语句，117 未覆盖）——已通过 tools.feature 覆盖全部工具入口调用。`部分分支` 指 `n_partial_branches`，`未覆盖分支` 指 `n_missing_branches`。
+> 注：覆盖率数据来自 2026-07-27 `e2e-tests/coverage-output/html/status.json`。agent.py 语句覆盖率 100%（157/157），分支 93%（56/60）。tools.py 语句 95%（146/154），分支 95%（59/62）。repo_map.py 语句 91%（51/56），分支 96%（27/28）。总覆盖率 66%（687 语句中 447 覆盖，238 分支中 161 覆盖）。`部分分支` 指 `n_partial_branches`，`未覆盖分支` 指 `n_missing_branches`。
 
-> 🆕 注：`tools.py` 的低覆盖率在此次更新前是因为 mock LLM 只触发 `list_directory` 一项工具调用。2026-07-26 新增 `tools.feature`（10 场景）已覆盖全部 6 个工具的调用路径。其中 find_files 已通过 4 个场景实现全路径覆盖（无匹配、过滤、正常匹配、100 截断）。`repo_map.py` 同理——`get_repo_map` 已通过 tools.feature 的 glob 过滤场景被调用。`init_db.py` 和 `migrate_sqlite_to_pg.py` 是独立脚本，不在 e2e 测试范围内。
+> 🆕 注：`tools.py` 覆盖率从 27% → 95%，得益于 `tools.feature`（10+ 场景）覆盖全部 6 个工具的调用路径，包括 find_files 全路径（无匹配、过滤、正常匹配、100 截断）、`_should_ignore` 过滤逻辑、get_symbols 正常提取与不支持语言路径。`repo_map.py` 覆盖率从 13% → 91%，得益于 `get_repo_map` 和 `get_symbols` 工具调用触发了 tree-sitter 核心解析路径（`detect_language`、`extract_symbols`、`_walk`、`_find_name`、`_simplify_type`）。
 
 ---
 
-## 1. agent.py — 100% 语句（156 语句，0 未覆盖 + 4 部分分支 + 4 未覆盖分支）
+## 1. agent.py — 98%（157/157 语句，0 未覆盖 + 4 部分分支 + 4 未覆盖分支）
 
 ### ✅ 已通过新增测试覆盖
 
@@ -63,9 +64,9 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ---
 
-## 2. app.py — 45%（76 语句，32 覆盖，44 未覆盖 + 6 部分分支 + 10 未覆盖分支）
+## 2. app.py — 50%（80 语句，37 覆盖，43 未覆盖 + 4 部分分支 + 8 未覆盖分支）
 
-> ⚠️ 行号基于 **修改前** 的 app.py（120 行）。删除 L53-54 后文件变为 118 行，后续行号偏移 -2，此处保持旧行号以匹配现有覆盖率数据。
+> ⚠️ 行号基于当前 app.py（125 行）。
 
 ### ⚪ 死代码（coverage bootstrap，结构上不可覆盖）
 
@@ -85,10 +86,9 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 | 行号 | 代码 | 说明 |
 |------|------|------|
-| **L46-47** | `get_data_layer()` 装饰器+定义行 | SQLAlchemyDataLayer 初始化回调。L48 已标记 `run`，框架确实调用 |
-| **L55-56** | `auth_callback` 用户名为空 → `return None` | 🆕 已修复 — 之前覆盖率为 0 是因为 `_save_coverage()` 仅在 `on_message` 末尾调用，login 请求不触发 `on_message`。已在 `auth_callback` 末尾增加 `_save_coverage()` 调用来修复。并非框架死代码 |
-| **L100-101** | 耗时超过 1 分钟的分支（`minutes > 0`） | `par` 标注 "condition was never true"——所有 query 在 1 分钟内完成 |
-| **L118-119** | `_save_coverage()` 异常 → `pass` | 异常安全分支，正常环境不可达。可加 `# pragma: no cover` |
+| **L46-47** | `get_data_layer()` 装饰器+定义行 | SQLAlchemyDataLayer 初始化回调 |
+| **L105-106** | 耗时超过 1 分钟的分支（`minutes > 0`） | mock 响应 <1 分钟，低优先级 |
+| **L123-124** | `_save_coverage()` 异常 → `pass` | 异常安全分支，正常环境不可达。可加 `# pragma: no cover` |
 
 ### ✅ 已覆盖（含本次新增）
 
@@ -105,11 +105,10 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 | 行号 | 标注 | 真相 |
 |------|------|------|
 | **L41** `if len(compact) <= limit` | "condition always true" → 🆕 已覆盖 | ✅ 新增长消息测试触发截断分支 |
-| ~~**L53**~~ | ~~密码校验~~ | 🗑️ 已删除 — 用户暂不需要密码验证功能 |
-| **L55** `if not username.strip()` | "condition never true" | 🆕 已修复 — 非死代码，实际已执行但 `_save_coverage()` 未在 login 路径调用导致覆盖率数据未落盘。已在 `auth_callback` 末尾增加保存 |
+| **L53** `if not username.strip()` | "condition never true" | 🆕 已修复 — 非死代码，已通过 auth_callback 末尾 `_save_coverage()` 落盘 |
 | **L88** `async for ...` | "loop didn't complete" | ❌ C tracer 假阴性：`break` 退出循环 |
-| **L100** `if minutes > 0` | "condition never true" | ✅ 真缺口：mock 响应太快，低优先级 |
-| **L115** `if _coverage_data_file` | "condition always true" | ✅ 真缺口：coverage 环境始终启用 |
+| **L105** `if minutes > 0` | "condition never true" | ✅ 真缺口：mock 响应太快，低优先级 |
+| **L120** `if _coverage_data_file` | "condition always true" | ✅ 真缺口：coverage 环境始终启用 |
 
 ---
 
@@ -129,7 +128,7 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ---
 
-## 4. mcp_server.py — 52%（62 语句，30 未覆盖 + 3 部分分支 + 9 未覆盖分支）
+## 4. mcp_server.py — 49%（62 语句，32 覆盖，30 未覆盖 + 3 部分分支 + 9 未覆盖分支）
 
 ### ⚪ 死代码（coverage bootstrap，结构上不可覆盖）
 
@@ -168,73 +167,88 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 
 ---
 
-## 5. tools.py — 27%（173 语句，117 未覆盖 + 3 部分分支 + 72 未覆盖分支）
+## 5. tools.py — 95%（154 语句，146 覆盖，8 未覆盖 + 3 部分分支 + 3 未覆盖分支）
 
-### 🆕 2026-07-26 更新：find_files 全路径覆盖
+### 🆕 2026-07-27：从 27% → 95%
 
-`tools.py` 定义了 6 个 Agent 工具。此前只有 `list_directory` 被 e2e 实际调用。现已通过 `tools.feature` 新增 10 个场景，覆盖全部 6 个工具的调用路径及 `_should_ignore` 过滤逻辑。其中 `find_files` 已实现**全路径覆盖**（4 个场景）：
+`tools.py` 定义了 6 个 Agent 工具，现已通过 `tools.feature`（10+ 场景）实现近乎全覆盖。剩馀 8 个未覆盖语句均为边界异常分支和 C tracer 假阴性。
 
-### find_files 覆盖详情
+### 覆盖情况总览
+
+| 工具 | 场景数 | 已覆盖路径 | 未覆盖路径 |
+|------|--------|-----------|-----------|
+| `list_directory` | 2 | 正常目录树、文件路径报错 | PermissionError 静默跳过（L52）、500 行截断（L72-73） |
+| `find_files` | 4 | 正常匹配、空结果、过滤、100 截断 | ✅ **全路径覆盖** |
+| `grep_code` | 1 | 无匹配结果 | ripgrep 错误退出（L136）、超时（L138）、8000 字符截断（L130-131） |
+| `read_file` | 2 | 文件不存在、目录路径报错 | PermissionError（L158-159） |
+| `get_symbols` | 3 | 正常提取、不支持语言、文件不存在 | tree-sitter 解析返回空（L197 — 需构造解析失败但语言可检测的场景） |
+| `get_repo_map` | 2 | glob 过滤空结果、200 文件截断 | ✅ **全路径覆盖** |
+
+### find_files 覆盖详情（全路径）
 
 | 场景 | 覆盖代码路径 |
 |------|-------------|
-| find_files无匹配时返回空结果 | L97→L98：`not matches` → `"No files found matching"` |
-| find_files过滤掉IGNORE_DIRS中的.git目录文件 | L91→L92：`_should_ignore` → True → skip |
-| find_files正常匹配返回文件列表 | L90→L93→L97(False)→L100→L103：正常匹配 → append → join → return |
-| find_files结果超过100个时触发截断 | L94-95：`>= 100` break + L101-102：`== 100` 截断后缀 |
+| find_files无匹配时返回空结果 | L96→L97：`not matches` → `"No files found matching"` |
+| find_files过滤掉IGNORE_DIRS中的.git目录文件 | L90→L91：`_should_ignore` → True → skip |
+| find_files正常匹配返回文件列表 | L89→L90→L92→L96(False)→L99→L102：正常匹配 → append → join → return |
+| find_files结果超过100个时触发截断 | L93-94：`>= 100` break + L100-101：`== 100` 截断后缀 |
 
-> **DAL 正则匹配注意事项**：DAL 的 `RegexNode` 使用 `Pattern.DOTALL` + `Matcher.matches()`，`.` 默认跨行匹配，但需要全串匹配。验证多行输出时 `content = /.*expected_suffix/` 即可（`.*` 贪婪匹配至末尾回溯）。转义字符仅 `\/` 被 DAL 特殊处理，`\.`、`\(`、`\)` 等正常传递至 Java `Pattern.compile()`。
+### 剩馀 8 个未覆盖语句分析
 
-| 工具 | 场景 | 触发的代码路径 |
-|------|------|---------------|
-| `list_directory` | list_directory对文件路径返回错误 | `is_dir() == False` → `"Not a directory"` |
-| `find_files` | find_files无匹配时返回空结果 | 无 glob 匹配 → `"No files found matching"` |
-| `find_files` | find_files过滤掉IGNORE_DIRS中的.git目录文件 | glob 匹配 `.git/HEAD` → `_should_ignore` 过滤 → matches 为空 |
-| `find_files` | 🆕 find_files正常匹配返回文件列表 | glob 匹配 `build.gradle` → 非忽略 + is_file → 返回文件路径 |
-| `find_files` | 🆕 find_files结果超过100个时触发截断 | glob 匹配 `**/*.java`（757 文件）→ 100 截断 + 后缀 |
-| `grep_code` | grep_code无匹配时返回空结果 | rg returncode 1 → `"No matches found."` |
-| `read_file` | read_file读取不存在文件返回错误 | `not exists` → `"File not found"` |
-| `read_file` | read_file读取目录路径返回错误 | `not is_file` → `"Not a file"` |
-| `get_symbols` | get_symbols分析存在文件正常返回内容 🆕 | 正常符号提取路径（is_file → extract_symbols → 符号列表拼接） |
-| `get_symbols` | get_symbols分析存在文件但类型不支持 🆕 | `detect_language` None → `"Unsupported language"` |
-| `get_symbols` | get_symbols分析不存在文件返回错误 | `not is_file` → `"File not found"` |
-| `get_repo_map` | get_repo_map带glob过滤 | `file_glob="**/*.py"` → 无可解析文件，返回 "No parseable source files found" |
+| 位置 | 代码 | 原因 |
+|------|------|------|
+| **L52** | `return`（`_walk` 内 PermissionError） | 需构造无权限目录，容器内难以触发 |
+| **L72-73** | `if len(lines) > 500` + 截断后缀 | 需构造 >500 行的目录树，低优先级 |
+| **L130-131** | `if len(output) > 8000` 截断 | 需构造超大 grep 输出 |
+| **L136** | `return f"Search error: ..."` | ripgrep 自身错误（returncode > 1），罕见 |
+| **L138** | `return "Search timed out..."` | 需 30 秒超时，mock 环境不可达 |
+| **L158-159** | `except PermissionError` | 文件无读权限，容器内难以触发 |
+| **L197** | `return f"No symbols extracted from ..."` | tree-sitter 解析成功但无符号 |
+| **L6-7** | `from config import settings` / `from repo_map import ...` | C tracer 假阴性（模块级 import，无跳转） |
 
-### 覆盖率限制
+### 3 个 partial + 3 个 missing 分支分析
 
-尽管全部 6 个工具均被调用，覆盖率仍有限（27%），原因：
-- 每个场景仅触发一个工具的**单一代码路径**
-- `_safe_path` 正常通过路径被覆盖，但 `ValueError` 路径已在 `chat_api.feature` "工具执行异常"场景覆盖
-- `_should_ignore` 🆕 已通过 "find_files过滤掉IGNORE_DIRS中的.git目录文件" 场景触发匹配路径
-- `_grep_fallback`（纯 Python fallback）已删除（容器必装 ripgrep，死代码）
-- C tracer (`branch=True`) 假阴性导致大量顺序执行行被标记为未覆盖
-
-**剩余未覆盖路径**（均为工具内部边界/异常分支）：
-
-| 工具 | 未覆盖路径 |
-|------|-----------|
-| `list_directory` | PermissionError 静默跳过（L52-53）、500 行截断（L74） |
-| `find_files` | 🆕 已全部覆盖（正常匹配、空结果、过滤、100截断） |
-| `grep_code` | ripgrep 错误退出（returncode > 1）、超时、🆕 file_glob 过滤、🆕 8000 字符截断 |
-| `read_file` | PermissionError |
-| `get_symbols` | 🆕 已覆盖正常提取（用例：get_symbols分析存在文件正常返回内容）、不支持语言提示（用例：get_symbols分析存在文件但类型不支持）。仅剩 extract_symbols 返回空（非"不支持语言"路径）未覆盖——需 tree-sitter 解析失败或文件无符号场景 |
-| `get_repo_map` | 🆕 已覆盖无可解析文件提示（用例：get_repo_map带glob过滤）；🆕 已覆盖 200 文件截断（用例：get_repo_map带glob过滤存在文件匹配触发200个文件数限制） |
+| 分支 | 说明 |
+|------|------|
+| **L130** `if len(output) > 8000` | 一侧未走（mock 响应小），低优先级 |
+| **L51-52** `except PermissionError: return` | 权限异常不可达，低优先级 |
+| **L157-158** `except PermissionError` | 同上 |
+| Missing branch × 3 | C tracer 假阴性：`def`/`@tool` 装饰器行
 
 ---
 
-## 6. repo_map.py — 13%（60 语句，48 未覆盖 + 0 部分分支 + 32 未覆盖分支）
+## 6. repo_map.py — 93%（56 语句，51 覆盖，5 未覆盖 + 1 部分分支 + 1 未覆盖分支）
 
-### 🆕 更新
+### 🆕 2026-07-27：从 13% → 93%
 
-`get_repo_map` 工具已通过 `tools.feature` 的 "get_repo_map带glob过滤" 场景被实际调用（`file_glob="**/*.py"`），覆盖了空结果返回路径（`"No parseable source files found"`）。tree-sitter AST 解析的大部分内部逻辑仍未覆盖——`detect_language`、`extract_symbols` 等核心函数仅在工具被调用时作为依赖执行，其内部分支覆盖极低。`get_symbols` 的正常提取路径也通过新增的 "get_symbols分析存在文件正常返回内容" 场景获得覆盖。
+`repo_map.py` 的核心函数（`detect_language`、`extract_symbols`、`_walk`、`_find_name`、`_simplify_type`）已通过 `get_symbols` 和 `get_repo_map` 工具调用获得全面覆盖。剩馀 5 个未覆盖语句均为 C tracer 假阴性和 tree-sitter 未安装 fallback。
 
-### 未覆盖路径
+### 覆盖详情
 
-| 模块 | 说明 |
+| 函数 | 覆盖路径 | 状态 |
+|------|---------|------|
+| `detect_language()` | `.java` 扩展名 → 返回 `"java"`；未知扩展名 → `None` | ✅ 全覆盖 |
+| `extract_symbols()` | tree-sitter 正常解析、解析异常 → `return []` | ✅ 全覆盖 |
+| `_walk()` | 递归遍历 AST 节点，提取类/方法/构造函数符号 | ✅ 全覆盖 |
+| `_find_name()` | identifier/type_identifier 直接子节点、嵌套查找 | ✅ 全覆盖 |
+| `_simplify_type()` | constructor / class / interface / enum / annotation / method | ✅ 全覆盖 |
+| `get_repo_map` 调用 | 正常符号映射、glob 过滤空结果、200 文件截断 | ✅ 全覆盖 |
+
+### 剩馀 5 个未覆盖语句
+
+| 位置 | 代码 | 原因 |
+|------|------|------|
+| **L46-47** | `if not TREE_SITTER_AVAILABLE: return []` | tree-sitter 始终可用（容器预装），不可达 |
+| **L3** | `from pathlib import Path` | C tracer 假阴性（模块级 import） |
+| **L5-10** | `try: from tree_sitter_languages ... except ImportError` | C tracer 假阴性（模块级 try/except import） |
+| **L12-33** | `EXTENSION_TO_LANG` / `_SYMBOL_NODE_TYPES` / `_NAME_NODE_TYPES` | C tracer 假阴性（模块级常量定义） |
+
+### 分支分析
+
+| 分支 | 说明 |
 |------|------|
-| `detect_language()` | 20+ 语言的文件扩展名映射，e2e 工作区仅含 Python/Java/Gradle 文件 |
-| `extract_symbols()` | tree-sitter 解析器初始化、各语言 AST 遍历逻辑 |
-| 边界逻辑 | 🆕 200 文件截断、空目录/无可解析文件提示均已覆盖 |
+| **L46** `if not TREE_SITTER_AVAILABLE` | partial — 一侧未走（tree-sitter 始终可用），低优先级 |
+| Missing branch × 1 | C tracer 假阴性（`def` 定义行） |
 
 ---
 
@@ -253,21 +267,23 @@ migrate_*.py░░░░░░░░░░   0%   126            0+44          �
 5. ~~**app.py 会话恢复**（L68-70）~~ ✅ 已完成 — "断开重连后恢复会话不重新发送欢迎消息"
 6. ~~**app.py `_preview_text` 截断**（L43）~~ ✅ 已完成 — "长消息触发preview截断"
 7. ~~**app.py 密码错误**（L53-54）~~ 🗑️ 已删除 — 用户暂不需要密码验证功能
-8. ~~**app.py L55-56**（`auth_callback` 空用户名）~~ ✅ 已完成 — 在 `auth_callback` 末尾增加 `_save_coverage()` 调用，修复 login 路径覆盖率未落盘问题
-9. ~~**tools.py 全部工具调用**~~ 🆕 ✅ 已完成 — `tools.feature`（10 场景）覆盖全部 6 个工具的入口调用、错误处理路径、find_files 全路径覆盖（含 100 截断）
-10. **app.py L100-101**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
-11. ~~**tools.py 内部边界分支**（PermissionError、截断、超时等）~~ 🆕 ✅ find_files 已全部覆盖；其余工具边界分支（PermissionError、超时等）— 低优先级，需构造特殊容器环境
-12. **repo_map.py tree-sitter 解析** — 低优先级，tree-sitter 库自身逻辑不在测试范围
+8. ~~**app.py L55-56**（`auth_callback` 空用户名）~~ ✅ 已完成 — 在 `auth_callback` 末尾增加 `_save_coverage()` 调用
+9. ~~**tools.py 全部工具调用**~~ ✅ 已完成 — `tools.feature`（10+ 场景）覆盖全部 6 个工具，95% 覆盖率
+10. ~~**tools.py find_files 全路径**~~ ✅ 已完成 — 无匹配、过滤、正常匹配、100 截断
+11. ~~**tools.py get_symbols / get_repo_map**~~ ✅ 已完成 — 正常提取、不支持语言、空结果、200 截断
+12. ~~**repo_map.py tree-sitter 解析**~~ ✅ 已完成 — 93% 覆盖率，核心函数全覆盖
+13. **app.py L105-106**（长耗时格式）— 低优先级，纯展示逻辑，可加 `# pragma: no cover`
 
 ### 可加 `# pragma: no cover` 的代码
 
 | 文件 | 行号 | 原因 |
 |------|------|------|
 | `app.py` | L2-23 | Coverage bootstrap，鸡生蛋问题 |
-| `app.py` | L100-101 | 长耗时时间格式，mock 场景下不可达 |
-| `app.py` | L118-119 | `_save_coverage()` 异常安全分支，正常环境不可达 |
+| `app.py` | L105-106 | 长耗时时间格式，mock 场景下不可达 |
+| `app.py` | L123-124 | `_save_coverage()` 异常安全分支，正常环境不可达 |
 | `mcp_server.py` | L13-29 | Coverage bootstrap，同上 |
 | `mcp_server.py` | L94-95 | 异常安全分支，同上 |
 | `config.py` | L28-32 | `database_sync_url`，仅独立脚本使用 |
+| `repo_map.py` | L46-47 | `TREE_SITTER_AVAILABLE` 检查，容器始终预装 tree-sitter |
 
 > 注：模块级 `import`、`def` 定义行、`@decorator`、`if __name__ == "__main__"` 等 C tracer 假阴性**不需要**加 `# pragma: no cover`——它们是 C tracer (`branch=True`) 的已知粒度限制，并非真正的未覆盖代码。不应为了覆盖率数字而添加误导性标记。
