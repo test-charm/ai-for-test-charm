@@ -62,6 +62,7 @@ _SYMBOL_NODE_TYPES = frozenset(
         "impl_item",  # Rust
         "module_declaration",
         "object_declaration",  # Kotlin
+        "annotation_type_declaration",  # Java @interface
     }
 )
 
@@ -147,11 +148,12 @@ def _find_name(node, source: bytes) -> str | None:
 
 
 def _simplify_type(node_type: str) -> str:
-    for label in ("class", "interface", "enum", "struct", "trait", "impl", "module"):
-        if label in node_type:
-            return label
+    # Check "constructor" before label loop — "struct" is a substring of "constructor"
     if "constructor" in node_type:
         return "constructor"
+    for label in ("class", "interface", "enum", "struct", "trait", "impl", "module", "annotation", "object"):
+        if label in node_type:
+            return label
     if "method" in node_type:
         return "method"
     if "function" in node_type:
