@@ -1003,6 +1003,65 @@
 
   Rule: Get symbols
 
+    场景: get_symbols分析存在文件但类型不支持
+      假如Mock API:
+        """
+        POST: '/v1/chat/completions'
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: tool_calls
+            message: {
+              toolCalls!: [{
+                function: {
+                  name: get_symbols
+                  arguments: ```
+                             {"file_path": "build.gradle"}
+                             ```
+                }
+              }]
+            }
+          }]
+        }
+        ---
+        body(LlmResponse): {
+          choices: [{
+            finishReason: stop
+            message: {
+              content: 'get_symbols结果：符号索引完成。'
+            }
+          }]
+        }
+        """
+      当用户发送消息"test get_symbols not found"
+      那么收到的 Socket.IO 事件应满足:
+        """
+        ::eventually: {
+          receivedEvents::filter: {
+            name= new_message
+          } : [ ... {
+            data.output: ```
+                         get_symbols结果：符号索引完成。
+
+                         ---
+                         ⏱️ 耗时 0秒
+                         ```
+          }]
+        }
+        """
+      并且数据应为:
+        """
+        MockApi::filter: { POST: '/v1/chat/completions' } : [ ... {
+          body.json: {
+            messages: [... {
+              content: *
+              role: tool
+              tool_call_id: get_symbols-0
+            }]
+          }
+        }]
+        """
+
     场景: get_symbols分析不存在文件返回错误
       假如Mock API:
         """

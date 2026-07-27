@@ -41,8 +41,8 @@ fi
 
 if [ ! -f "$STAMP_FILE" ] || [ "$(cat "$STAMP_FILE")" != "$REQ_HASH" ]; then
   log_info "Installing Python dependencies"
-  pip install --no-cache-dir --upgrade pip
-  pip install --no-cache-dir -r "$REQ_FILE" watchfiles
+  pip install --no-cache-dir --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple
+  pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r "$REQ_FILE" watchfiles
   printf '%s' "$REQ_HASH" > "$STAMP_FILE"
 else
   log_warn "Python dependencies already match requirements.txt"

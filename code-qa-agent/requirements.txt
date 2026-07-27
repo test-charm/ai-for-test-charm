@@ -5,6 +5,7 @@ chainlit==2.11.1
 python-dotenv==1.2.2
 pydantic==2.13.4
 pydantic-settings==2.14.2
+tree-sitter<0.24
 tree-sitter-languages==1.10.2
 asyncpg==0.31.0
 psycopg2-binary==2.9.12
