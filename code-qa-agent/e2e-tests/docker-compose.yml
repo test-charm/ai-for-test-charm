@@ -207,7 +207,74 @@ services:
       start_period: 300s
     restart: unless-stopped
 
+  # ─── eval profile: real LLM (opencode zen) + embedding sidecar ───
+  code-qa-agent-eval:
+    <<: *e2e-image
+    profiles: ["eval"]
+    init: true
+    working_dir: /app
+    command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-chainlit-dev.sh"]
+    ports:
+      - "18000:8000"
+    volumes:
+      - ..:/app
+      - ${WORKSPACE_PATH:-..}:/workspace:ro
+      - code-qa-agent-venv:/opt/venv
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+      CQA_LLM_PROVIDER: openai
+      CQA_LLM_MODEL: ${CQA_LLM_MODEL}
+      CQA_MAX_ITERATIONS: 200
+      CQA_LLM_API_KEY: ${CQA_LLM_API_KEY}
+      CQA_LLM_BASE_URL: ${CQA_LLM_BASE_URL}
+      CQA_WORKSPACE_PATH: /workspace
+      CQA_AUTH_PASSWORD: ""
+      CQA_DB_HOST: postgres
+      CQA_DB_PORT: 5432
+      CQA_DB_NAME: code_qa_agent
+      CQA_DB_USER: code_qa_agent
+      CQA_DB_PASSWORD: code_qa_agent
+      CHAINLIT_AUTH_SECRET: 7a296ea4e13bd219a4bfe8cf771a2e79c312f84dab7989b8069dc5f6975fe647
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+    restart: unless-stopped
+
+  embedding:
+    build:
+      context: ..
+      dockerfile: e2e-tests/Dockerfile.embedding
+    profiles: ["eval"]
+    ports:
+      - "18002:8001"
+    volumes:
+      - embedding-models:/app/.cache/huggingface
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+    restart: unless-stopped
+
 volumes:
   code-qa-agent-venv:
   e2e-pgdata:
   mcp-server-venv:
+  embedding-models:

@@ -146,6 +146,25 @@ public class SocketIOSteps {
                     }
                   }
                 """.formatted(message));
+
+        // Capture the threadId from the first new_message event for later use by EvalSteps
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (System.currentTimeMillis() < deadline) {
+            var threadId = client.getReceivedEvents().stream()
+                    .filter(e -> "new_message".equals(e.get("name")))
+                    .map(e -> e.get("data"))
+                    .filter(d -> d instanceof Map<?, ?>)
+                    .map(d -> ((Map<?, ?>) d).get("threadId"))
+                    .filter(t -> t instanceof String)
+                    .map(Object::toString)
+                    .findFirst()
+                    .orElse(null);
+            if (threadId != null) {
+                PathVariableReplacement.replacements.put("eval-thread-id", threadId);
+                break;
+            }
+            Thread.sleep(200);
+        }
     }
 
     @SneakyThrows
