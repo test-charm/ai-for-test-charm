@@ -42,7 +42,7 @@ run_profile() {
 
   # 停掉之前的所有容器
   log_info "Stopping existing containers..."
-  docker compose --profile default --profile deepseek --profile anthropic down --remove-orphans 2>/dev/null || true
+  docker compose --profile default --profile deepseek --profile anthropic --profile eval down --remove-orphans 2>/dev/null || true
 
   # 启动当前 profile
   log_info "Starting $profile containers..."

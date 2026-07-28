@@ -24,25 +24,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ─── 检查必需的环境变量 ───
-if [ -z "${CQA_LLM_API_KEY:-}" ]; then
-  log_fail "CQA_LLM_API_KEY 未设置。请在运行前设置: export CQA_LLM_API_KEY=sk-..."
-  echo ""
-  echo "  示例配置:"
-  echo "    export CQA_LLM_MODEL=deepseek-v4-flash-free"
-  echo "    export CQA_LLM_API_KEY=sk-..."
-  echo "    export CQA_LLM_BASE_URL=https://opencode.ai/zen/v1"
-  echo ""
-  exit 1
-fi
-
-# ─── 默认值 ───
-export CQA_LLM_MODEL="${CQA_LLM_MODEL:-deepseek-v4-flash-free}"
-export CQA_LLM_BASE_URL="${CQA_LLM_BASE_URL:-https://opencode.ai/zen/v1}"
-
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-
-log_section "Eval Profile — ${CQA_LLM_MODEL} @ opencode zen"
 
 # ─── 停掉之前的 profile ───
 log_info "Stopping existing containers..."
@@ -55,7 +37,7 @@ echo
 
 # ─── 运行 eval 测试 ───
 log_info "Running eval tests..."
-if ./gradlew cucumber -Pfile=src/test/resources/features/eval_system_prompt.feature 2>&1 | sed 's/^/  /'; then
+if ./gradlew cucumber -Pfile=src/test/resources/evals/eval_system_prompt.feature 2>&1 | sed 's/^/  /'; then
   log_ok "Eval tests passed"
 else
   log_fail "Eval tests failed"

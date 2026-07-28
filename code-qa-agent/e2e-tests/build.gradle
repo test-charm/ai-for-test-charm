@@ -65,7 +65,7 @@ tasks.register('cucumber', JavaExec) {
         '--plugin', 'pretty',
         '--glue', 'org.testcharm',
         '--glue', 'com.github',
-        project.findProperty('file') ?: 'src/test/resources'
+        project.findProperty('file') ?: 'src/test/resources/features'
     ]
     if (project.findProperty('tags')) args += ['--tags', project.tags]
 }
