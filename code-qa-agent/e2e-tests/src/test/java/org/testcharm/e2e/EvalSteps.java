@@ -136,30 +136,81 @@ public class EvalSteps {
 
     @SneakyThrows
     private double callNliAggregated(String actual, String golden) {
-        // Split golden into individual factual claims (separated by blank lines or bullet-like markers)
-        // and check each claim against the actual reply. Return the minimum entailment score.
-        String[] claims = golden.split("\\n{2,}");  // split on blank lines
+        // Split golden into individual factual claims (separated by blank lines)
+        String[] claims = golden.split("\\n{2,}");
         if (claims.length <= 1) {
-            // Fallback: split on sentence boundaries
             claims = golden.split("(?<=[。])\\s*");
         }
         if (claims.length == 1) {
-            // Single claim — use as-is
-            return callNliRaw(actual, golden.trim()).getDouble("score");
+            return callNliRaw(golden.trim(), actual).getDouble("score");
         }
+
+        // Preprocess reply: strip markdown fences, then split into paragraphs
+        String clean = actual
+                .replaceAll("```[a-z]*\\n[\\s\\S]*?```", " ")  // strip code blocks
+                .replaceAll("\\|.*\\|", " ")                     // strip markdown table rows
+                .replaceAll("\\*\\*|__|`", "")                   // strip bold/italic/code markers
+                .replaceAll("(?m)^[-*]{3,}\\s*$", "");             // strip horizontal rules
+        String[] paragraphs = clean.split("\\n{2,}");
 
         double totalScore = 0;
         int count = 0;
         for (String claim : claims) {
             String c = claim.strip();
             if (c.length() < 10) continue;
-            double score = callNliRaw(c, actual).getDouble("score");
+
+            // Find the most relevant paragraph for this claim
+            String bestParagraph = selectBestParagraph(c, paragraphs, actual);
+
+            double score = callNliRaw(c, bestParagraph).getDouble("score");
             log.info("NLI claim: '{}' ... → score={}", c.length() > 60 ? c.substring(0, 60) + "..." : c, score);
             totalScore += score;
             count++;
         }
         if (count == 0) return callNliRaw(golden.trim(), actual).getDouble("score");
         return totalScore / count;
+    }
+
+    /** Pick the paragraph with the highest keyword overlap with the claim.
+     *  Always include the first paragraph (core answer), concatenated with the best match. */
+    private String selectBestParagraph(String claim, String[] paragraphs, String fullText) {
+        // Normalize: keep CJK chars, ASCII letters/digits, and code-significant symbols (< > . / =)
+        String claimNormalized = claim.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
+        if (claimNormalized.length() < 2) return fullText;
+
+        String best = fullText;
+        double bestScore = -1;
+        for (String para : paragraphs) {
+            String p = para.strip();
+            if (p.length() < 15) continue;
+            String pNormalized = p.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
+            double overlap = charBigramOverlap(claimNormalized, pNormalized);
+            double adjustedScore = overlap - (p.length() > 300 ? 0.1 : 0);
+            if (adjustedScore > bestScore) {
+                bestScore = adjustedScore;
+                best = p;
+            }
+        }
+
+        // Always prepend the first paragraph (core answer) to ensure baseline context
+        String first = paragraphs.length > 0 ? paragraphs[0].strip() : "";
+        if (!first.isEmpty() && !best.equals(first) && first.length() < 300) {
+            best = first + "\n" + best;
+        }
+        return best;
+    }
+
+    /** Simple character bigram Jaccard overlap between two normalized strings. */
+    private double charBigramOverlap(String a, String b) {
+        if (a.length() < 2 || b.length() < 2) return 0;
+        var aSet = new java.util.HashSet<String>();
+        var bSet = new java.util.HashSet<String>();
+        for (int i = 0; i < a.length() - 1; i++) aSet.add(a.substring(i, i + 2));
+        for (int i = 0; i < b.length() - 1; i++) bSet.add(b.substring(i, i + 2));
+        if (aSet.isEmpty() || bSet.isEmpty()) return 0;
+        var intersection = new java.util.HashSet<>(aSet);
+        intersection.retainAll(bSet);
+        return (double) intersection.size() / Math.min(aSet.size(), bSet.size());
     }
 
     @SneakyThrows

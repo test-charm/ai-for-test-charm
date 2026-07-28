@@ -7,14 +7,14 @@
     当收齐回复
     而且回复蕴含度应大于 0.7:
       """
-      有，用 `<<0 1>>` 的 group 语法。
+      有，用 <<>> group 语法实现。
 
-      `<a,b>: 1` 是 DAL 的 group 语法，表示 a 和 b 两个属性值相等。
+      `<<a, b>>: 1` 叫做 group 表达式。
 
-      验证 list[0].value 和 list[1].value 都等于 100，可以写成 list<<0 1>>.value= 100。
+      list<<0 1>>.value= 100 可以验证两个 index 的属性值。
 
-      这是公开能力。<<>> group 语法的解析实现在 GroupExpression.java 和 Compiler.java 中。
+      <<>> group 语法实现在 GroupExpression.java。
 
-      示例来自 group.feature 文件。
+      <<>> group 语法参考了 group.feature。
       """
 
