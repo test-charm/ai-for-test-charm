@@ -4,14 +4,13 @@ import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
+import org.testcharm.jfactory.JFactory;
 
-import java.net.URI;
+import java.math.BigDecimal;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import static org.testcharm.dal.Assertions.expect;
@@ -142,15 +141,16 @@ public class EvalSteps {
             claims = golden.split("(?<=[。])\\s*");
         }
         if (claims.length == 1) {
-            return callNliRaw(golden.trim(), actual).getDouble("score");
+            return callNliRaw(golden.trim(), actual);
         }
 
-        // Preprocess reply: strip markdown fences, then split into paragraphs
+        // Preprocess reply: strip markdown fences (keep code content), then split into paragraphs
         String clean = actual
-                .replaceAll("```[a-z]*\\n[\\s\\S]*?```", " ")  // strip code blocks
-                .replaceAll("\\|.*\\|", " ")                     // strip markdown table rows
-                .replaceAll("\\*\\*|__|`", "")                   // strip bold/italic/code markers
-                .replaceAll("(?m)^[-*]{3,}\\s*$", "");             // strip horizontal rules
+                .replaceAll("```[a-z]*\\n?", " ")              // strip opening fences ```lang
+                .replaceAll("\\n?```", " ")                     // strip closing fences ```
+                .replaceAll("\\|", " ")                          // strip table pipe chars
+                .replaceAll("\\*\\*|__|`", "")                  // strip bold/italic/inline-code markers
+                .replaceAll("(?m)^[-*]{3,}\\s*$", "");          // strip horizontal rules
         String[] paragraphs = clean.split("\\n{2,}");
 
         double totalScore = 0;
@@ -162,12 +162,12 @@ public class EvalSteps {
             // Find the most relevant paragraph for this claim
             String bestParagraph = selectBestParagraph(c, paragraphs, actual);
 
-            double score = callNliRaw(c, bestParagraph).getDouble("score");
+            double score = callNliRaw(c, bestParagraph);
             log.info("NLI claim: '{}' ... → score={}", c.length() > 60 ? c.substring(0, 60) + "..." : c, score);
             totalScore += score;
             count++;
         }
-        if (count == 0) return callNliRaw(golden.trim(), actual).getDouble("score");
+        if (count == 0) return callNliRaw(golden.trim(), actual);
         return totalScore / count;
     }
 
@@ -214,21 +214,17 @@ public class EvalSteps {
     }
 
     @SneakyThrows
-    private JSONObject callNliRaw(String hypothesis, String premise) {
-        // hypothesis = the claim to check (from golden)
-        // premise    = the actual agent reply
-        JSONObject body = new JSONObject();
-        body.put("text1", hypothesis);  // hypothesis (short claim)
-        body.put("text2", premise);     // premise   (full agent reply)
+    private double callNliRaw(String hypothesis, String premise) {
+        var restfulStep = new RestfulStep();
+        restfulStep.setJFactory(new JFactory());
+        restfulStep.setBaseUrl(embeddingBaseUrl);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(embeddingBaseUrl + "/entailment"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
-                .timeout(Duration.ofSeconds(60))
-                .build();
+        var body = new org.json.JSONObject();
+        body.put("text1", hypothesis);
+        body.put("text2", premise);
+        restfulStep.postInJson("/entailment", body.toString());
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return new JSONObject(response.body());
+        log.info("nli response: {}", (String)restfulStep.response("body.string"));
+        return ((BigDecimal)restfulStep.response("body.json.score")).doubleValue();
     }
 }

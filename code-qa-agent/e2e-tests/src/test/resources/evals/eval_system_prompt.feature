@@ -9,11 +9,11 @@
       """
       有，用 <<>> group 语法实现。
 
-      `<<a, b>>: 1` 叫做 group 表达式。
+      `<<a, b>>: 1` 是 group 表达式的属性写法。
 
       list<<0 1>>.value= 100 可以验证两个 index 的属性值。
 
-      <<>> group 语法实现在 GroupExpression.java。
+      <<>> group 语法由 GroupExpression 实现。
 
       <<>> group 语法参考了 group.feature。
       """
