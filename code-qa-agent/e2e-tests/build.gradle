@@ -60,7 +60,7 @@ tasks.register('cucumber', JavaExec) {
     dependsOn testClasses
     mainClass = 'io.cucumber.core.cli.Main'
     classpath = sourceSets.test.runtimeClasspath
-    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=utf-8', '-Dsun.net.client.defaultReadTimeout=10000', '--add-opens', 'java.base/sun.net.www.protocol.http=ALL-UNNAMED'
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=utf-8', '--add-opens', 'java.base/sun.net.www.protocol.http=ALL-UNNAMED'
     args = [
         '--plugin', 'pretty',
         '--glue', 'org.testcharm',

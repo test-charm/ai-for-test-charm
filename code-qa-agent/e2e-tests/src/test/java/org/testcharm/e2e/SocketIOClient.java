@@ -1,6 +1,7 @@
 package org.testcharm.e2e;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,8 +15,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
+@Slf4j
 public class SocketIOClient {
 
     @Getter
@@ -26,7 +29,10 @@ public class SocketIOClient {
     private String engineSid;
     private int pollSeq;
     private volatile Thread pollThread;
+    private volatile int connectionGeneration;
     private final String wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
+    private final AtomicInteger pollCount = new AtomicInteger(0);
+    private final AtomicInteger pollErrorCount = new AtomicInteger(0);
 
     @Autowired
     @Lazy
@@ -43,6 +49,8 @@ public class SocketIOClient {
     private RestfulStep pollStep;
 
     public void connect(Map<String, String> auth) throws Exception {
+        stopPollThread();
+
         // Step 1: Engine.IO handshake
         String handshakeResp = testHttpGet(wsBasePath);
 
@@ -72,25 +80,68 @@ public class SocketIOClient {
         connectedLatch.countDown();
         running = true;
         pollSeq = 0;
-        pollThread = new Thread(this::pollLoop);
+        int myGeneration = ++connectionGeneration;
+        pollThread = new Thread(() -> pollLoop(myGeneration));
         pollThread.setDaemon(true);
         pollThread.start();
     }
 
-    private void pollLoop() {
-        while (running) {
+    private void pollLoop(int generation) {
+        log.info("Poll loop started generation={}", generation);
+        while (running && generation == connectionGeneration) {
+            int count = pollCount.incrementAndGet();
             try {
-                String resp = pollHttpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
-                if (resp != null && resp.length() > 1) {
-                    processMessages(resp);
+                if (count <= 3 || count % 10 == 0) {
+                    log.info("Poll #{} starting GET sid={} running={}", count, engineSid, running);
                 }
+                String resp = pollHttpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
+                if (resp != null && !resp.isEmpty()) {
+                    // Handle Engine.IO ping: a lone "2" character
+                    if (resp.equals("2")) {
+                        try {
+                            pollHttpPost(wsBasePath + "&sid=" + engineSid, "3");
+                        } catch (Exception ignored) {}
+                        if (running && generation == connectionGeneration) {
+                            Thread.sleep(50);
+                        }
+                        continue;
+                    }
+                    // Detect invalid session to break tight loop
+                    if (resp.contains("Invalid session")) {
+                        log.error("Poll #{} received 'Invalid session', stopping poll loop", count);
+                        receivedEvents.add(Map.of("name", "invalid_session",
+                                "data", Map.of("message", resp)));
+                        break;
+                    }
+                    log.info("Poll #{} received {} chars, preview: {}", count, resp.length(),
+                            resp.length() > 120 ? resp.substring(0, 120) + "..." : resp);
+                    processMessages(resp);
+                    log.info("Poll #{} after processMessages, total events={}, event names: {}",
+                            count, receivedEvents.size(),
+                            receivedEvents.stream().map(e -> e.get("name")).toList());
+                } else {
+                    log.debug("Poll #{} received empty response", count);
+                }
+                // Prevent tight-looping: always yield between polls
+                if (running && generation == connectionGeneration) {
+                    Thread.sleep(50);
+                }
+            } catch (InterruptedException e) {
+                log.info("Poll loop interrupted");
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
-                if (running) {
+                int errCount = pollErrorCount.incrementAndGet();
+                log.error("Poll #{} error (total errors={}): {}", count, errCount, e.toString());
+                if (running && generation == connectionGeneration) {
                     receivedEvents.add(Map.of("name", "poll_error",
                             "data", Map.of("message", e.getMessage())));
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) { break; }
                 }
             }
         }
+        log.info("Poll loop exiting generation={} running={} currentGeneration={}",
+                generation, running, connectionGeneration);
     }
 
     // ── test-thread HTTP (uses RestfulStep) ──
@@ -228,11 +279,21 @@ public class SocketIOClient {
     }
 
     public void clear() {
-        running = false;
-        if (pollThread != null) {
-            pollThread.interrupt();
-        }
+        stopPollThread();
         receivedEvents.clear();
         connected = false;
+    }
+
+    private void stopPollThread() {
+        running = false;
+        connectionGeneration++;
+        if (pollThread != null) {
+            pollThread.interrupt();
+            try {
+                pollThread.join(1);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

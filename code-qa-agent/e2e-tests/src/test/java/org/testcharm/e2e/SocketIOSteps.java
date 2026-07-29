@@ -1,5 +1,7 @@
 package org.testcharm.e2e;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.cucumber.java.After;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.而且;
@@ -92,10 +94,7 @@ public class SocketIOSteps {
 
     @After(order = 999)
     public void disconnect() {
-        if (client != null) {
-            client.clear();
-            client = null;
-        }
+        client.clear();
     }
 
     private void extractThreadId(String text) {
@@ -207,10 +206,18 @@ public class SocketIOSteps {
     @SneakyThrows
     @当("收齐回复")
     public void 收齐回复() {
-        long deadline = System.currentTimeMillis() + 600_000;
+        long deadline = System.currentTimeMillis() + 180_000;
         String lastContent = "";
+        int loopCount = 0;
         while (System.currentTimeMillis() < deadline) {
+            loopCount++;
             String content = queryLastAssistantMessage();
+            if (loopCount <= 5 || loopCount % 10 == 0) {
+                log.info("收齐回复 loop #{} content={} eventCount={}",
+                        loopCount,
+                        content != null ? ("'" + (content.length() > 80 ? content.substring(0, 80) + "..." : content) + "'") : "null",
+                        client.getReceivedEvents().size());
+            }
             if (content != null && !content.isBlank() && !content.equals(lastContent)) {
                 lastContent = content;
                 long stableUntil = System.currentTimeMillis() + 5000;
@@ -231,7 +238,10 @@ public class SocketIOSteps {
         }
 
         if (lastAgentReply == null) {
-            throw new AssertionError("Agent did not respond within 600s. Check agent logs.");
+            log.info("receivedEvents: {}", new ObjectMapper()
+                    .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+                    .writeValueAsString(client.getReceivedEvents()));
+            throw new AssertionError("Agent did not respond within 180s. Check agent logs.");
         }
 
         // Strip the timing footer appended by app.py ("\n\n---\n⏱️ 耗时 ...")
@@ -247,7 +257,7 @@ public class SocketIOSteps {
     private String lastAgentReply;
 
     @而且("回复蕴含度应大于 {double}:")
-    public void ya回复蕴含度应大于(double threshold, String goldenText) {
+    public void 回复蕴含度应大于(double threshold, String goldenText) {
         if (lastAgentReply == null) {
             throw new AssertionError("No reply captured. Call 收齐回复 before 回复蕴含度.");
         }
@@ -301,28 +311,38 @@ public class SocketIOSteps {
         return totalScore / count;
     }
 
-    /** Pick the paragraph with the highest keyword overlap with the claim.
-     *  Always include the first paragraph (core answer), concatenated with the best match. */
+    /** Pick the semantically most relevant paragraph for the claim.
+     *  Two-stage: bigram pre-filter (top-5) → embedding similarity re-rank. */
     private String selectBestParagraph(String claim, String[] paragraphs, String fullText) {
-        // Normalize: keep CJK chars, ASCII letters/digits, and code-significant symbols (< > . / =)
         String claimNormalized = claim.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
         if (claimNormalized.length() < 2) return fullText;
 
-        String best = fullText;
-        double bestScore = -1;
+        // Stage 1: bigram pre-filter → top 5 candidates
+        var scored = new java.util.ArrayList<Map.Entry<String, Double>>();
         for (String para : paragraphs) {
             String p = para.strip();
             if (p.length() < 15) continue;
             String pNormalized = p.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
             double overlap = charBigramOverlap(claimNormalized, pNormalized);
-            double adjustedScore = overlap - (p.length() > 300 ? 0.1 : 0);
-            if (adjustedScore > bestScore) {
-                bestScore = adjustedScore;
+            scored.add(new java.util.AbstractMap.SimpleEntry<>(p, overlap));
+        }
+        scored.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        int topN = Math.min(5, scored.size());
+        if (topN == 0) return fullText;
+
+        // Stage 2: embedding similarity re-rank on top candidates
+        String best = fullText;
+        double bestScore = -1;
+        for (int i = 0; i < topN; i++) {
+            String p = scored.get(i).getKey();
+            double sim = callSimilarity(claim, p);
+            if (sim > bestScore) {
+                bestScore = sim;
                 best = p;
             }
         }
 
-        // Always prepend the first paragraph (core answer) to ensure baseline context
+        // Always prepend the first paragraph (core answer) for context
         String first = paragraphs.length > 0 ? paragraphs[0].strip() : "";
         if (!first.isEmpty() && !best.equals(first) && first.length() < 300) {
             best = first + "\n" + best;
@@ -357,16 +377,37 @@ public class SocketIOSteps {
         return ((BigDecimal)restfulStep.response("body.json.score")).doubleValue();
     }
 
+    /** Cosine similarity between two texts via the embedding sidecar. */
+    @SneakyThrows
+    private double callSimilarity(String text1, String text2) {
+        var restfulStep = new RestfulStep();
+        restfulStep.setJFactory(new JFactory());
+        restfulStep.setBaseUrl(embeddingBaseUrl);
+
+        var body = new org.json.JSONObject();
+        body.put("text1", text1);
+        body.put("text2", text2);
+        restfulStep.postInJson("/similarity", body.toString());
+
+        return ((BigDecimal)restfulStep.response("body.json.cosine_similarity")).doubleValue();
+    }
+
     @SneakyThrows
     private String queryLastAssistantMessage() {
+        var newMessages = client.getReceivedEvents().stream()
+                .filter(e -> "new_message".equals(e.get("name")))
+                .toList();
+        if (!newMessages.isEmpty()) {
+            log.debug("queryLastAssistantMessage: {} new_message events in {} total events",
+                    newMessages.size(), client.getReceivedEvents().size());
+        }
         return client.getReceivedEvents().stream()
                 .filter(e -> "new_message".equals(e.get("name")))
                 .map(e -> e.get("data"))
                 .filter(d -> d instanceof Map<?, ?>)
                 .map(d -> (Map<?, ?>) d)
-                .map(msgMap -> msgMap.get("output"))
-                .filter(output -> output instanceof String)
-                .map(Object::toString)
+                .map(msgMap -> (String)msgMap.get("output"))
+                .filter(output -> output != null && !output.contains("我已准备好分析代码库，请问你想了解什么？"))
                 .reduce((first, second) -> second)
                 .orElse(null);
     }
