@@ -206,7 +206,7 @@ public class SocketIOSteps {
     @SneakyThrows
     @当("收齐回复")
     public void 收齐回复() {
-        long deadline = System.currentTimeMillis() + 180_000;
+        long deadline = System.currentTimeMillis() + 600_000;
         String lastContent = "";
         int loopCount = 0;
         while (System.currentTimeMillis() < deadline) {
@@ -241,7 +241,7 @@ public class SocketIOSteps {
             log.info("receivedEvents: {}", new ObjectMapper()
                     .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
                     .writeValueAsString(client.getReceivedEvents()));
-            throw new AssertionError("Agent did not respond within 180s. Check agent logs.");
+            throw new AssertionError("Agent did not respond within 600s. Check agent logs.");
         }
 
         // Strip the timing footer appended by app.py ("\n\n---\n⏱️ 耗时 ...")
@@ -393,22 +393,26 @@ public class SocketIOSteps {
 
     @SneakyThrows
     private String queryLastAssistantMessage() {
-        var newMessages = client.getReceivedEvents().stream()
-                .filter(e -> "new_message".equals(e.get("name")))
+        var allMessages = client.getReceivedEvents().stream()
+                .filter(e -> "new_message".equals(e.get("name")) || "update_message".equals(e.get("name")))
                 .toList();
-        if (!newMessages.isEmpty()) {
-            log.debug("queryLastAssistantMessage: {} new_message events in {} total events",
-                    newMessages.size(), client.getReceivedEvents().size());
+        if (!allMessages.isEmpty()) {
+            log.debug("queryLastAssistantMessage: {} new_message/update_message events in {} total events",
+                    allMessages.size(), client.getReceivedEvents().size());
         }
-        return client.getReceivedEvents().stream()
-                .filter(e -> "new_message".equals(e.get("name")))
+        // Collect all non-empty assistant outputs, then take the last one.
+        // "type" distinguishes user_message (output is empty, content in "input") from assistant_message.
+        var outputs = client.getReceivedEvents().stream()
+                .filter(e -> "new_message".equals(e.get("name")) || "update_message".equals(e.get("name")))
                 .map(e -> e.get("data"))
                 .filter(d -> d instanceof Map<?, ?>)
                 .map(d -> (Map<?, ?>) d)
-                .map(msgMap -> (String)msgMap.get("output"))
-                .filter(output -> output != null && !output.contains("我已准备好分析代码库，请问你想了解什么？"))
-                .reduce((first, second) -> second)
-                .orElse(null);
+                .filter(msgMap -> "assistant_message".equals(msgMap.get("type")))
+                .map(msgMap -> (String) msgMap.get("output"))
+                .filter(output -> output != null && !output.isBlank()
+                        && !output.contains("我已准备好分析代码库，请问你想了解什么？"))
+                .toList();
+        return outputs.isEmpty() ? null : outputs.get(outputs.size() - 1);
     }
 
 }

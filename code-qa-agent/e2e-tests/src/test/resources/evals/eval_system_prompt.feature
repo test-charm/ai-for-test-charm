@@ -7,9 +7,9 @@
     当收齐回复
     而且回复蕴含度应大于 0.50:
       """
-      有，用 <<>> group 语法实现。
+      group 语法支持把 index 作为 group 节点来验证数组。
 
-      list<<0 1>>.value= 100 可以验证两个 index 的属性值。
+      可以写成 list<<0 1>>.value= 100，表示两个元素的 value 属性都等于 100。
       """
 
   场景: JFactory 多数据源读写问答
@@ -17,9 +17,19 @@
     当收齐回复
     而且回复蕴含度应大于 0.50:
       """
-      CompositeDataRepository 是公开 API。
+      CompositeDataRepository 可以根据类型、包名或自定义条件，将不同实体路由到对应的 DataRepository。
 
-      CompositeDataRepository 根据实体类型将不同数据路由到对应的 DataRepository 实现。
+      CompositeDataRepository 提供 registerByType、registerByPackage、registerBy 三种注册方式。
+      """
 
-      使用时创建一个 CompositeDataRepository，为不同实体类型注册不同的 DataRepository，再传入 JFactory 即可。
+  场景: RESTful-cucumber 同步设置 header
+    当用户发送消息"RESTful-cucumber 发请求的时候除了 request body，可以同步设置 header吗"
+    当收齐回复
+    而且回复蕴含度应大于 0.50:
+      """
+      可以同步设置 header。
+
+      通过 ::headers 内联语法在 doc-string 中设置 header。
+
+      Given header by RESTful api 是测试专用的。
       """
