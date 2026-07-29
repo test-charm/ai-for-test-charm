@@ -10,8 +10,6 @@
       有，用 <<>> group 语法实现。
 
       list<<0 1>>.value= 100 可以验证两个 index 的属性值。
-
-      <<>> group 表达式的运行时求值由 GroupExpression.java 实现。
       """
 
   场景: JFactory 多数据源读写问答
@@ -19,7 +17,7 @@
     当收齐回复
     而且回复蕴含度应大于 0.50:
       """
-      CompositeDataRepository 是公开 API，位于 src/main/java 目录下。
+      CompositeDataRepository 是公开 API。
 
       CompositeDataRepository 根据实体类型将不同数据路由到对应的 DataRepository 实现。
 

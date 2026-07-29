@@ -19,7 +19,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
-NLI_MODEL = os.environ.get("NLI_MODEL", "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7")
+NLI_MODEL = os.environ.get("NLI_MODEL", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
 
 _embedding_model: SentenceTransformer | None = None
 _nli_tokenizer: Any = None

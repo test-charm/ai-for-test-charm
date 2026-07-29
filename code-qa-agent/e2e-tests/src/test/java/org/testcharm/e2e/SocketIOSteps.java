@@ -311,7 +311,7 @@ public class SocketIOSteps {
     }
 
     /** Pick the semantically most relevant paragraph for the claim.
-     *  Two-stage: bigram pre-filter (top-5) → embedding similarity re-rank. */
+     *  Two-stage: bigram pre-filter (top-3) → embedding similarity re-rank. */
     private String selectBestParagraph(String claim, String[] paragraphs, String fullText) {
         String claimNormalized = claim.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
         if (claimNormalized.length() < 2) return fullText;
@@ -325,7 +325,7 @@ public class SocketIOSteps {
             scored.add(new java.util.AbstractMap.SimpleEntry<>(p, overlap));
         }
         scored.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
-        int topN = Math.min(5, scored.size());
+       int topN = Math.min(3, scored.size());
         if (topN == 0) return fullText;
 
         String best = fullText;
@@ -333,18 +333,20 @@ public class SocketIOSteps {
         for (int i = 0; i < topN; i++) {
             String p = scored.get(i).getKey();
             double sim = callSimilarity(claim, p);
-            if (sim > bestScore) {
-                bestScore = sim;
-                best = p;
-            }
-        }
+           log.debug("Embedding sim for paragraph: {} → {}", p.substring(0, Math.min(80, p.length())), sim);
+           if (sim > bestScore) {
+               bestScore = sim;
+               best = p;
+           }
+       }
+       log.debug("Best paragraph for claim: {}", best.substring(0, Math.min(120, best.length())));
 
-        // Always prepend the first paragraph (core answer) for context
-        String first = paragraphs.length > 0 ? paragraphs[0].strip() : "";
-        if (!first.isEmpty() && !best.equals(first) && first.length() < 300) {
-            best = first + "\n" + best;
-        }
-        return best;
+       // Always prepend the first paragraph (core answer) for context
+       String first = paragraphs.length > 0 ? paragraphs[0].strip() : "";
+       if (!first.isEmpty() && !best.equals(first) && first.length() < 300) {
+           best = first + "\n" + best;
+       }
+       return best;
     }
 
     /** Simple character bigram Jaccard overlap between two normalized strings. */
