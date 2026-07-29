@@ -299,7 +299,6 @@ public class SocketIOSteps {
             String c = claim.strip();
             if (c.length() < 10) continue;
 
-            // Find the most relevant paragraph for this claim
             String bestParagraph = selectBestParagraph(c, paragraphs, actual);
 
             double score = callNliRaw(c, bestParagraph);
@@ -317,7 +316,6 @@ public class SocketIOSteps {
         String claimNormalized = claim.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
         if (claimNormalized.length() < 2) return fullText;
 
-        // Stage 1: bigram pre-filter → top 5 candidates
         var scored = new java.util.ArrayList<Map.Entry<String, Double>>();
         for (String para : paragraphs) {
             String p = para.strip();
@@ -330,7 +328,6 @@ public class SocketIOSteps {
         int topN = Math.min(5, scored.size());
         if (topN == 0) return fullText;
 
-        // Stage 2: embedding similarity re-rank on top candidates
         String best = fullText;
         double bestScore = -1;
         for (int i = 0; i < topN; i++) {
