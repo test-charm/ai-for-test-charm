@@ -88,7 +88,7 @@ CLI 选项：`--disable-upload`、`--upload-only`、`--verify`、`--retry-count`
 
 ## code-qa-agent/ — Python 项目
 
-### 构建与测试
+### 构建
 
 ```bash
 cd code-qa-agent
@@ -109,40 +109,6 @@ python mcp_server.py --transport streamable-http --port 3001
 
 # Docker Compose 部署（同时启动 UI + MCP Server）
 WORKSPACE_PATH=/path/to/codebase docker compose up --build
-
-# 运行单元测试
-cd tests && python -m pytest test_agent.py -v
-# 或
-python -m unittest tests/test_agent.py
-```
-
-### 架构
-
-LangGraph ReAct Agent，通过 LangChain 工具（`list_directory`、`find_files`、`grep_code`、`read_file`、`get_symbols`、`get_repo_map`）主动探索代码库，再综合回答。
-
-```
-Chainlit UI ──→ CodeQAAgent.astream_response() ──→ LLM (OpenAI/Anthropic/Ollama)
-                         │                                   │
-                         └──── tool calls ──────────────────┘
-                                    │
-                              tools.py / repo_map.py
-                              (read-only filesystem access)
-
-MCP Server (mcp_server.py) ──→ CodeQAAgent.ask() [non-streaming]
-```
-
-双部署形态共享同一个 `CodeQAAgent` 类：
-- **Chainlit** (`app.py`)：流式 UI，按 `thread_id` 维护多轮对话历史，使用 SQLite 持久化聊天记录。
-- **MCP Server** (`mcp_server.py`)：无状态，每次调用创建新的 `CodeQAAgent` 实例，通过 `ask_repo_question` 工具暴露给其他 AI Agent。
-
-### 关键约定
-
-- **强制工具先行**：首轮对话使用 `tool_choice="required"/"any"`，确保 LLM 在回答前必须调用工具；调用工具后切换为 `tool_choice="auto"`。
-- **自动检测并重试"规划式"回复**：`_looks_like_incomplete_response()` 检测 LLM 返回"我来查一下..."类的规划文本，触发重试并注入约束提示。
-- **首轮注入目录树**：第一个问题自动调用 `list_directory` 并将结果注入 context，减少 LLM 盲目探索。
-- **路径安全**：`_safe_path()` 防止路径遍历（`../` 攻击），所有工具都受 `CQA_WORKSPACE_PATH` 约束。
-- **`get_repo_map`**：基于 tree-sitter AST 解析，生成全库符号索引（函数/类/方法签名），支持 20+ 语言，最多处理 200 个文件。
-- **配置前缀**：所有环境变量以 `CQA_` 为前缀（见 `config.py`），使用 pydantic-settings 加载。
 
 ### e2e 测试与代码覆盖率
 
@@ -236,3 +202,32 @@ app.py / mcp_server.py
 | `e2e-tests/collect-coverage.sh` | 合并 `.coverage-*` 文件并生成 HTML 报告 |
 | `app.py` + `mcp_server.py` | 顶部 coverage bootstrap + 请求末尾 save |
 | `requirements.txt` | 含 `coverage>=7.0.0` |
+
+
+### 架构
+
+LangGraph ReAct Agent，通过 LangChain 工具（`list_directory`、`find_files`、`grep_code`、`read_file`、`get_symbols`、`get_repo_map`）主动探索代码库，再综合回答。
+
+```
+Chainlit UI ──→ CodeQAAgent.astream_response() ──→ LLM (OpenAI/Anthropic/Ollama)
+                         │                                   │
+                         └──── tool calls ──────────────────┘
+                                    │
+                              tools.py / repo_map.py
+                              (read-only filesystem access)
+
+MCP Server (mcp_server.py) ──→ CodeQAAgent.ask() [non-streaming]
+```
+
+双部署形态共享同一个 `CodeQAAgent` 类：
+- **Chainlit** (`app.py`)：流式 UI，按 `thread_id` 维护多轮对话历史，使用 SQLite 持久化聊天记录。
+- **MCP Server** (`mcp_server.py`)：无状态，每次调用创建新的 `CodeQAAgent` 实例，通过 `ask_repo_question` 工具暴露给其他 AI Agent。
+
+### 关键约定
+
+- **强制工具先行**：首轮对话使用 `tool_choice="required"/"any"`，确保 LLM 在回答前必须调用工具；调用工具后切换为 `tool_choice="auto"`。
+- **自动检测并重试"规划式"回复**：`_looks_like_incomplete_response()` 检测 LLM 返回"我来查一下..."类的规划文本，触发重试并注入约束提示。
+- **首轮注入目录树**：第一个问题自动调用 `list_directory` 并将结果注入 context，减少 LLM 盲目探索。
+- **路径安全**：`_safe_path()` 防止路径遍历（`../` 攻击），所有工具都受 `CQA_WORKSPACE_PATH` 约束。
+- **`get_repo_map`**：基于 tree-sitter AST 解析，生成全库符号索引（函数/类/方法签名），支持 20+ 语言，最多处理 200 个文件。
+- **配置前缀**：所有环境变量以 `CQA_` 为前缀（见 `config.py`），使用 pydantic-settings 加载。
