@@ -279,6 +279,7 @@
                     - 在回答之前，你必须先使用提供的工具探索代码库。
                     - 绝不能只凭记忆回答，必须通过读取真实代码进行核实。
                     - 使用与用户相同的语言回复。
+                    - 回复正文中的自然语言描述必须使用中文。只有在引用代码库中的标识符（类名、方法名、变量名、文件路径、注解、关键字）时保留英文。
 
                     # 搜索与判定原则
                     - 默认先搜索与问题相关的 feature 文件，用它们定位候选场景、step 文本、关键词和相关模块。
@@ -346,28 +347,37 @@
                     ./
                     ├── bean-util/
                     │   ├── src/
-                    │   └── build.gradle
+                    │   ├── build.gradle
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── cucumber-swarm/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── DAL-extension-basic/
                     │   ├── src/
-                    │   └── build.gradle
+                    │   ├── build.gradle
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── DAL-extension-inspector/
                     │   ├── src/
                     │   └── build.gradle
                     ├── DAL-extension-jdbc/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── DAL-extension-jfactory/
                     │   ├── src/
-                    │   └── build.gradle
+                    │   ├── build.gradle
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── DAL-java/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── feature-summary/
                     │   ├── src/
                     │   └── build.gradle
@@ -386,22 +396,27 @@
                     ├── jfactory/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── jfactory-cucumber/
                     │   ├── doc/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── jfactory-DAL/
                     │   ├── src/
                     │   └── build.gradle
                     ├── jfactory-repo-jpa/
                     │   ├── src/
                     │   ├── build.gradle
-                    │   └── README.md
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── page-flow/
                     │   ├── src/
-                    │   └── build.gradle
+                    │   ├── build.gradle
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── page-flow-playwright/
                     │   ├── src/
                     │   └── build.gradle
@@ -410,7 +425,9 @@
                     │   └── build.gradle
                     ├── RESTful-cucumber/
                     │   ├── src/
-                    │   └── build.gradle
+                    │   ├── build.gradle
+                    │   ├── README.md
+                    │   └── README.zh-CN.md
                     ├── view-mapper/
                     │   ├── src/
                     │   └── build.gradle
@@ -420,7 +437,9 @@
                     ├── gradlew
                     ├── gradlew.bat
                     ├── LICENSE
+                    ├── NOTICE
                     ├── README.md
+                    ├── README.zh-CN.md
                     └── settings.gradle
 
                     Now answer my question: hello
@@ -476,7 +495,9 @@
                      ├── gradlew
                      ├── gradlew.bat
                      ├── LICENSE
+                     ├── NOTICE
                      ├── README.md
+                     ├── README.zh-CN.md
                      └── settings.gradle
                      ```
             role: tool

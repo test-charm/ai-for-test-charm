@@ -115,12 +115,13 @@
         body.json: {
           messages: [... {
             content: ```
-                     class TextUtil (L7-25): public class TextUtil {
-                         class lines (L7-25): public class TextUtil {
-                         method lines (L8-10): public static List<String> lines(String content) {
-                         method String (L12-16): public static String join(List<Character> characters) {
-                         method differentPosition (L18-24): public static int differentPosition(String expected, String actual) {
-                     ```
+                    class TextUtil (L9-32): public class TextUtil {
+                        class TextUtil (L9-32): public class TextUtil {
+                        constructor TextUtil (L11-13): @GeneratedForJacocoIgnore
+                        method lines (L15-17): public static List<String> lines(String content) {
+                        method String (L19-23): public static String join(List<Character> characters) {
+                        method differentPosition (L25-31): public static int differentPosition(String expected, String actual) {
+                    ```
             role: tool
             tool_call_id: get_symbols-0
           }]
@@ -180,30 +181,28 @@
         body.json: {
           messages: [... {
             content: ```
-                     class DAL (L25-157): public class DAL {
-                         class Compiler (L25-157): public class DAL {
+                     class DAL (L25-145): public class DAL {
+                         class Compiler (L25-145): public class DAL {
                          constructor DAL (L32-35): @Deprecated
                          method DAL (L37-40): @Deprecated
-                         method DAL (L42-48): @Deprecated
-                         method DAL (L50-52): public static DAL dal() {
-                         constructor DAL (L54-56): public DAL(String name) {
-                         method String (L58-60): public String getName() {
-                         method DAL (L62-64): public static synchronized DAL dal(String name) {
-                         method DAL (L66-71): public static DAL create(String name, Class<?>... exceptExtensions) {
-                         method RuntimeContextBuilder (L73-75): public RuntimeContextBuilder getRuntimeContextBuilder() {
-                         method evaluateAll (L77-79): public <T> List<T> evaluateAll(Object input, String expressions) {
-                         method evaluateAll (L81-83): public <T> List<T> evaluateAll(InputCode<Object> input, String expressions) {
-                         method evaluateAll (L85-97): @SuppressWarnings("unchecked")
-                         method T (L99-101): public <T> T evaluate(Object input, String expression) {
-                         method T (L103-105): public <T> T evaluate(InputCode<Object> input, String expression) {
-                         method T (L107-109): public <T> T evaluate(InputCode<Object> input, String expression, Class<?> rootSchema) {
-                         method T (L111-121): @SuppressWarnings("unchecked")
-                         method DALNode (L123-128): public DALNode compileSingle(String expression, DALRuntimeContext runtimeContext) {
-                         method compile (L130-133): public List<DALNode> compile(String expression, DALRuntimeContext runtimeContext) {
-                         method getOperandPosition (L135-137): private int getOperandPosition(DALNode node) {
-                         method String (L139-141): private String format(String expression) {
-                         method DAL (L143-152): public DAL extend(Class<?>... excepts) {
-                         method wrap (L154-156): public Data<?> wrap(Object object) {
+                         method DAL (L42-44): public static DAL dal() {
+                         constructor DAL (L46-48): public DAL(String name) {
+                         method String (L50-52): public String getName() {
+                         method DAL (L54-56): public static synchronized DAL dal(String name) {
+                         method DAL (L58-63): public static DAL create(String name, Class<?>... exceptExtensions) {
+                         method RuntimeContextBuilder (L65-67): public RuntimeContextBuilder getRuntimeContextBuilder() {
+                         method evaluateAll (L69-71): public <T> List<T> evaluateAll(Object input, String expressions) {
+                         method evaluateAll (L73-75): public <T> List<T> evaluateAll(InputCode<Object> input, String expressions) {
+                         method evaluateAll (L77-89): @SuppressWarnings("unchecked")
+                         method T (L91-93): public <T> T evaluate(Object input, String expression) {
+                         method T (L95-97): public <T> T evaluate(InputCode<Object> input, String expression) {
+                         method T (L99-101): public <T> T evaluate(InputCode<Object> input, String expression, Class<?> rootSchema) {
+                         method T (L103-113): @SuppressWarnings("unchecked")
+                         method DALNode (L115-120): public DALNode compileSingle(String expression, DALRuntimeContext runtimeContext) {
+                         method compile (L122-125): public List<DALNode> compile(String expression, DALRuntimeContext runtimeContext) {
+                         method String (L127-129): private String format(String expression) {
+                         method DAL (L131-140): public DAL extend(Class<?>... excepts) {
+                         method wrap (L142-144): public Data<?> wrap(Object object) {
                      ```
             role: tool
             tool_call_id: get_symbols-0
@@ -389,11 +388,12 @@
         body.json: {
           messages: [... {
             content: ```
-                     class TextUtil (L7-25): public class TextUtil {
-                         class lines (L7-25): public class TextUtil {
-                         method lines (L8-10): public static List<String> lines(String content) {
-                         method String (L12-16): public static String join(List<Character> characters) {
-                         method differentPosition (L18-24): public static int differentPosition(String expected, String actual) {
+                     class TextUtil (L9-32): public class TextUtil {
+                         class TextUtil (L9-32): public class TextUtil {
+                         constructor TextUtil (L11-13): @GeneratedForJacocoIgnore
+                         method lines (L15-17): public static List<String> lines(String content) {
+                         method String (L19-23): public static String join(List<Character> characters) {
+                         method differentPosition (L25-31): public static int differentPosition(String expected, String actual) {
                      ```
             role: tool
             tool_call_id: get_symbols-0

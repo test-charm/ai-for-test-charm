@@ -83,7 +83,9 @@
                        ├── gradlew
                        ├── gradlew.bat
                        ├── LICENSE
+                       ├── NOTICE
                        ├── README.md
+                       ├── README.zh-CN.md
                        └── settings.gradle
                        ```
               role: tool
@@ -505,7 +507,7 @@
         body.json: {
           messages: [... {
             content= ```
-                     /workspace/jfactory-cucumber/src/main/java/org/testcharm/jfactory/cucumber/JData.java:28:public class JData {
+                     /workspace/jfactory-cucumber/src/main/java/org/testcharm/jfactory/cucumber/JData.java:29:public class JData {
 
                      ```
             role: tool
@@ -953,7 +955,7 @@
                 function: {
                   name: read_file
                   arguments: ```
-                             {"file_path": "jfactory/README.md"}
+                             {"file_path": "DAL-java/src/main/java/org/testcharm/dal/runtime/RuntimeContextBuilder.java"}
                              ```
                 }
               }]
@@ -992,7 +994,7 @@
           body.json: {
             messages: [... {
               content::should.endsWith: ```
-                                        ── Use read_file('jfactory/README.md', start_line=301) to continue ──
+                                        ── Use read_file('DAL-java/src/main/java/org/testcharm/dal/runtime/RuntimeContextBuilder.java', start_line=301) to continue ──
                                         ```
               role: tool
               tool_call_id: read_file-0
@@ -1055,19 +1057,18 @@
           body.json: {
             messages: [... {
               content: ```
-                       class CollectorInDAL (L15-84): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
-                           class extend (L15-84): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
-                           method extend (L17-70): @Override
+                       class CollectorInDAL (L15-79): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
+                           class extend (L15-79): public class CollectorInDAL implements org.testcharm.dal.runtime.Extension {
+                           method extend (L17-65): @Override
                            class Object (L25-30): .registerPropertyAccessor(Collector.class, new PropertyAccessor<Collector>() {
                            method Object (L26-29): @Override
                            class Collector (L37-42): return new InfiniteDALCollection<Collector>(Collector::new) {
                            method Collector (L38-41): @Override
-                           class match (L46-58): .registerOperator(Operators.EQUAL, new Operation<JFactoryCollector, ExpectationFactory>() {
-                           method match (L47-50): @Override
-                           method operateData (L52-57): @Override
-                           method verificationOptAsAssignmentOpt (L72-83): private Optional<Checker> verificationOptAsAssignmentOpt(Data<?> actual) {
-                           class failed (L74-81): return Optional.of(new Checker() {
-                           method failed (L75-80): @Override
+                           class operate (L46-53): .registerOperator(Operators.EQUAL, new AbstractOperation<JFactoryCollector, ExpectationFactory>() {
+                           method operate (L47-52): @Override
+                           method verificationOptAsAssignmentOpt (L67-78): private Optional<Checker> verificationOptAsAssignmentOpt(Data<?> actual) {
+                           class failed (L69-76): return Optional.of(new Checker() {
+                           method failed (L70-75): @Override
                        ```
               role: tool
               tool_call_id: get_symbols-0
@@ -1250,51 +1251,51 @@
               content: ```
                        Repository symbol map — 1 files, 45 symbols:
                        ── jfactory-cucumber/src/main/java/org/testcharm/jfactory/cucumber/JData.java ──
-                         constructor JData (L32): public JData(JFactory jFactory) {
-                         method prepare (L41): public <T> List<T> prepare(String traitsSpec, DocData docData) {
-                         method DocData (L52): @DocStringType
-                         method DocData (L57): @DataTableType
-                         method prepare (L70): @SuppressWarnings("unchecked")
-                         method prepare (L75): @SuppressWarnings("unchecked")
-                         method prepare (L81): @SuppressWarnings("unchecked")
-                         method prepare (L87): public <T> List<T> prepare(Class<T> type, DocData docData) {
-                         method prepare (L98): @SuppressWarnings("unchecked")
-                         method prepare (L103): @SafeVarargs
-                         method prepare (L108): public <T> List<T> prepare(Class<T> type, List<? extends Map<String, ?>> data) {
-                         method removeTransposeSymbol (L112): private static List<List<String>> removeTransposeSymbol(DataTable dataTable) {
-                         method needTranspose (L118): private static boolean needTranspose(DataTable dataTable) {
-                         method allShould (L126): public void allShould(String queryExpression, String dalExpression) {
-                         method should (L134): public void should(String queryExpression, String dalExpression) {
-                         method T (L138): public <T> T query(String queryExpression) {
-                         method queryAll (L142): public <T> Collection<T> queryAll(String queryExpression) {
-                         method prepare (L149): public <T> List<T> prepare(int count, String traitsSpec) {
-                         method defaultProperties (L153): private List<Map<String, ?>> defaultProperties(int count) {
-                         method prepareAttachments (L161): public void prepareAttachments(String beanProperty, String traitsSpec, DocData docData) {
-                         method prepareAttachments (L174): public <T> List<T> prepareAttachments(String beanProperty, String traitsSpec, String expression) {
-                         method prepareAttachments (L178): @SuppressWarnings("unchecked")
-                         method prepareAttachments (L183): public <T> List<T> prepareAttachments(String beanProperty, String traitsSpec, List<? extends Map<String, ?>> data) {
-                         method setupAssociation (L187): @SuppressWarnings("unchecked")
-                         method prepareAttachments (L206): public <T> List<T> prepareAttachments(String beanProperty, int count, String traitsSpec) {
-                         method prepareAttachments (L214): public void prepareAttachments(String traitsSpec, String reverseAssociationProperty, String queryExpression, DocData docData) {
-                         method prepareAttachments (L227): @SuppressWarnings("unchecked")
-                         method prepareAttachments (L234): @SuppressWarnings("unchecked")
-                         method prepareAttachments (L240): public <T> List<T> prepareAttachments(String traitsSpec, String reverseAssociationProperty, String queryExpression,
-                         method addAssociationProperty (L245): private List<Map<String, ?>> addAssociationProperty(String reverseAssociationProperty, String queryExpression,
-                         method prepareAttachments (L255): public <T> List<T> prepareAttachments(int count, String traitsSpec, String reverseAssociationProperty,
-                         method prepare (L264): public void prepare(String data) {
-                         method allDataShouldBe (L274): public void allDataShouldBe(String dalExpression) {
-                         class QueryExpression (L278): private class QueryExpression {
-                             class String (L278): private class QueryExpression {
-                             constructor QueryExpression (L283): public QueryExpression(String expression) {
-                             method queryAll (L293): @SuppressWarnings("unchecked")
-                             method T (L298): public <T> T query() {
-                         class DocData (L306): public static class DocData {
-                             class Type (L306): public static class DocData {
-                             constructor DocData (L310): public DocData(String expression) {
-                             constructor DocData (L315): public DocData(List<Map<String, String>> maps) {
-                             method String (L320): public String expression() {
-                             method maps (L324): @SuppressWarnings("unchecked")
-                             enum Type (L329): enum Type {
+                         constructor JData (L33): public JData(JFactory jFactory) {
+                         method prepare (L42): public <T> List<T> prepare(String traitsSpec, DocData docData) {
+                         method DocData (L49): @DocStringType
+                         method DocData (L54): @DataTableType
+                         method prepare (L67): @SuppressWarnings("unchecked")
+                         method prepare (L72): @SuppressWarnings("unchecked")
+                         method prepare (L78): @SuppressWarnings("unchecked")
+                         method prepare (L84): public <T> List<T> prepare(Class<T> type, DocData docData) {
+                         method prepare (L91): @SuppressWarnings("unchecked")
+                         method prepare (L96): @SafeVarargs
+                         method prepare (L101): public <T> List<T> prepare(Class<T> type, List<? extends Map<String, ?>> data) {
+                         method removeTransposeSymbol (L105): private static List<List<String>> removeTransposeSymbol(DataTable dataTable) {
+                         method needTranspose (L111): private static boolean needTranspose(DataTable dataTable) {
+                         method allShould (L119): public void allShould(String queryExpression, String dalExpression) {
+                         method should (L127): public void should(String queryExpression, String dalExpression) {
+                         method T (L131): public <T> T query(String queryExpression) {
+                         method queryAll (L135): public <T> Collection<T> queryAll(String queryExpression) {
+                         method prepare (L142): public <T> List<T> prepare(int count, String traitsSpec) {
+                         method defaultProperties (L146): private List<Map<String, ?>> defaultProperties(int count) {
+                         method prepareAttachments (L154): public void prepareAttachments(String beanProperty, String traitsSpec, DocData docData) {
+                         method prepareAttachments (L163): public <T> List<T> prepareAttachments(String beanProperty, String traitsSpec, String expression) {
+                         method prepareAttachments (L167): @SuppressWarnings("unchecked")
+                         method prepareAttachments (L172): public <T> List<T> prepareAttachments(String beanProperty, String traitsSpec, List<? extends Map<String, ?>> data) {
+                         method setupAssociation (L176): @SuppressWarnings("unchecked")
+                         method prepareAttachments (L195): public <T> List<T> prepareAttachments(String beanProperty, int count, String traitsSpec) {
+                         method prepareAttachments (L203): public void prepareAttachments(String traitsSpec, String reverseAssociationProperty, String queryExpression, DocData docData) {
+                         method prepareAttachments (L212): @SuppressWarnings("unchecked")
+                         method prepareAttachments (L219): @SuppressWarnings("unchecked")
+                         method prepareAttachments (L225): public <T> List<T> prepareAttachments(String traitsSpec, String reverseAssociationProperty, String queryExpression,
+                         method addAssociationProperty (L230): private List<Map<String, ?>> addAssociationProperty(String reverseAssociationProperty, String queryExpression,
+                         method prepareAttachments (L240): public <T> List<T> prepareAttachments(int count, String traitsSpec, String reverseAssociationProperty,
+                         method prepare (L249): public void prepare(String data) {
+                         method allDataShouldBe (L259): public void allDataShouldBe(String dalExpression) {
+                         class QueryExpression (L263): private class QueryExpression {
+                             class String (L263): private class QueryExpression {
+                             constructor QueryExpression (L268): public QueryExpression(String expression) {
+                             method queryAll (L278): @SuppressWarnings("unchecked")
+                             method T (L283): public <T> T query() {
+                         class DocData (L291): public static class DocData {
+                             class Type (L291): public static class DocData {
+                             constructor DocData (L295): public DocData(String expression) {
+                             constructor DocData (L300): public DocData(List<Map<String, String>> maps) {
+                             method String (L305): public String expression() {
+                             method maps (L309): @SuppressWarnings("unchecked")
+                             enum Type (L314): enum Type {
                        ```
               role: tool
               tool_call_id: get_repo_map-0
