@@ -218,6 +218,26 @@ public class SocketIOSteps {
                         content != null ? ("'" + (content.length() > 80 ? content.substring(0, 80) + "..." : content) + "'") : "null",
                         client.getReceivedEvents().size());
             }
+            // Every 15 loops with no content, dump event diagnostics to help debug flaky timeouts
+            if (content == null && loopCount % 15 == 0) {
+                var msgEvents = new ArrayList<String>();
+                for (var e : client.getReceivedEvents()) {
+                    String name = (String) e.get("name");
+                    if (!"new_message".equals(name) && !"update_message".equals(name)) continue;
+                    Object d = e.get("data");
+                    String type = "?";
+                    String outPreview = "?";
+                    if (d instanceof Map<?, ?> m) {
+                        Object typeObj = m.get("type");
+                        type = typeObj != null ? typeObj.toString() : "?";
+                        Object outObj = m.get("output");
+                        String outStr = outObj != null ? outObj.toString() : "?";
+                        outPreview = outStr.length() > 60 ? outStr.substring(0, 60) + "..." : outStr;
+                    }
+                    msgEvents.add(name + " type=" + type + " output='" + outPreview.replace("\n", "\\n") + "'");
+                }
+                log.info("收齐回复 diagnostic loop #{}: msgEvents=[{}]", loopCount, String.join(" | ", msgEvents));
+            }
             if (content != null && !content.isBlank() && !content.equals(lastContent)) {
                 lastContent = content;
                 long stableUntil = System.currentTimeMillis() + 5000;
@@ -298,15 +318,7 @@ public class SocketIOSteps {
 
     @SneakyThrows
     private String queryLastAssistantMessage() {
-        var allMessages = client.getReceivedEvents().stream()
-                .filter(e -> "new_message".equals(e.get("name")) || "update_message".equals(e.get("name")))
-                .toList();
-        if (!allMessages.isEmpty()) {
-            log.debug("queryLastAssistantMessage: {} new_message/update_message events in {} total events",
-                    allMessages.size(), client.getReceivedEvents().size());
-        }
-        // Collect all non-empty assistant outputs, then take the last one.
-        // "type" distinguishes user_message (output is empty, content in "input") from assistant_message.
+        // First try: find assistant_message from new_message/update_message events
         var outputs = client.getReceivedEvents().stream()
                 .filter(e -> "new_message".equals(e.get("name")) || "update_message".equals(e.get("name")))
                 .map(e -> e.get("data"))
@@ -316,8 +328,66 @@ public class SocketIOSteps {
                 .map(msgMap -> (String) msgMap.get("output"))
                 .filter(output -> output != null && !output.isBlank()
                         && !output.contains("我已准备好分析代码库，请问你想了解什么？"))
-                .toList();
-        return outputs.isEmpty() ? null : outputs.get(outputs.size() - 1);
+                .reduce((first, second) -> second)
+                .orElse(null);
+        if (outputs != null) {
+            return outputs;
+        }
+
+        // Fallback: reconstruct from stream_token events.
+        // This handles the case where msg.send() fails to deliver the final
+        // new_message (e.g., due to large payloads with Chainlit HTTP polling).
+        var tokenStreams = new LinkedHashMap<String, StringBuilder>();
+        String firstStepId = null;
+        boolean seenAssistantStream = false;
+        for (var e : client.getReceivedEvents()) {
+            if (!"stream_start".equals(e.get("name")) && !"stream_token".equals(e.get("name")))
+                continue;
+            Object d = e.get("data");
+            if (!(d instanceof Map<?, ?> m)) continue;
+            Object stepIdObj = m.get("id");
+            if (!(stepIdObj instanceof String stepId)) continue;
+
+            if ("stream_start".equals(e.get("name"))) {
+                // Mark the first stream_start after the greeting as the assistant stream
+                if (!seenAssistantStream) {
+                    firstStepId = stepId;
+                    seenAssistantStream = true;
+                }
+            } else {
+                // stream_token
+                Object tokenObj = m.get("token");
+                if (!(tokenObj instanceof String token) || token.isEmpty()) continue;
+                Object isSeqObj = m.get("isSequence");
+                boolean isSeq = isSeqObj instanceof Boolean b && b;
+                var sb = tokenStreams.computeIfAbsent(stepId, k -> new StringBuilder());
+                if (isSeq) {
+                    sb.setLength(0);
+                }
+                sb.append(token);
+            }
+        }
+
+        // Use the content from the first assistant stream (after greeting)
+        if (firstStepId != null) {
+            var sb = tokenStreams.get(firstStepId);
+            if (sb != null && !sb.isEmpty()) {
+                String content = sb.toString().strip();
+                if (!content.isBlank() && !content.contains("我已准备好分析代码库，请问你想了解什么？")) {
+                    return content;
+                }
+            }
+        }
+
+        // Final fallback: use the last stream with non-empty content
+        for (var entry : tokenStreams.entrySet()) {
+            String content = entry.getValue().toString().strip();
+            if (!content.isBlank() && !content.contains("我已准备好分析代码库，请问你想了解什么？")) {
+                return content;
+            }
+        }
+
+        return null;
     }
 
 }
