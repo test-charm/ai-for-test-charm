@@ -40,3 +40,17 @@
 
       Given header by RESTful api 是测试专用的，不能给用户使用。
       """
+
+  场景: JFactory 简介问答
+    当用户发送消息"简单介绍一下jfactory"
+    当收齐回复
+    而且回复蕴含度应大于 0.70:
+      """
+      jfactory 是 Test Charm 的数据创建库，核心理念是先定义有意义的 Spec 形态，场景中只覆盖关心的字段。
+
+      支持 Spec 复用数据形状、Trait 叠加变体、DataRepository 自动保存和查询复用。
+
+      嵌套属性设置时会自动查找 repository 中已有数据复用，保持数据一致性。
+
+      相关模块包括 jfactory-cucumber、jfactory-repo-jpa、DAL-extension-jfactory。
+      """
