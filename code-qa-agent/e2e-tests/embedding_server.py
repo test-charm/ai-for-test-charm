@@ -1,16 +1,19 @@
-"""Eval sidecar: embedding similarity + NLI entailment detection.
+"""Eval sidecar: embedding similarity + NLI entailment + semantic containment.
 
 Endpoints:
   POST /similarity   — cosine similarity via sentence-transformers
   POST /entailment   — NLI entailment/contradiction via cross-encoder
+  POST /containment  — semantic containment: cross-similarity of claims vs reply sentences
 
 Runs on port 8001.
 """
 
 import os
+import re
 from contextlib import asynccontextmanager
 from typing import Any
 
+import numpy as np
 import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -20,6 +23,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
 NLI_MODEL = os.environ.get("NLI_MODEL", "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+CONTAINMENT_THRESHOLD = float(os.environ.get("CONTAINMENT_THRESHOLD", "0.6"))
 
 _embedding_model: SentenceTransformer | None = None
 _nli_tokenizer: Any = None
@@ -127,3 +131,61 @@ def health():
         "nli_model": NLI_MODEL,
         "nli_id2label": _nli_id2label,
     }
+
+
+# ── semantic containment ──
+
+
+def _strip_markdown(text: str) -> str:
+    """Strip markdown formatting, keeping code content."""
+    text = re.sub(r'```[a-z]*\n?', ' ', text)
+    text = re.sub(r'\n?```', ' ', text)
+    text = re.sub(r'\|', ' ', text)
+    text = re.sub(r'\*\*|__|`', '', text)
+    text = re.sub(r'(?m)^[-*]{3,}\s*$', '', text)
+    return text
+
+
+def _split_sentences(text: str) -> list[str]:
+    """Split text into sentences on Chinese/English punctuation."""
+    text = _strip_markdown(text)
+    text = re.sub(r'[ \t]+', ' ', text).strip()
+    sentences = re.split(r'(?<=[。！？.!?\n])\s*', text)
+    return [s.strip() for s in sentences if len(s.strip()) >= 10]
+
+
+class ContainmentRequest(BaseModel):
+    claims: list[str]
+    reply: str
+
+
+class ContainmentResponse(BaseModel):
+    scores: list[float]
+    ratio: float
+    threshold: float
+    passed: bool
+
+
+@app.post("/containment", response_model=ContainmentResponse)
+def containment(req: ContainmentRequest) -> ContainmentResponse:
+    """Cross-similarity: for each claim, find max cosine similarity against any reply sentence."""
+    reply_sentences = _split_sentences(req.reply)
+    if not reply_sentences:
+        return ContainmentResponse(
+            scores=[0.0] * len(req.claims), ratio=0.0,
+            threshold=CONTAINMENT_THRESHOLD, passed=False,
+        )
+
+    claim_embeds = _embedding_model.encode(req.claims, normalize_embeddings=True)
+    reply_embeds = _embedding_model.encode(reply_sentences, normalize_embeddings=True)
+    cos_scores = cosine_similarity(claim_embeds, reply_embeds)
+
+    scores = [float(np.max(row)) for row in cos_scores]
+    ratio = round(float(np.mean(scores)), 4) if scores else 0.0
+
+    return ContainmentResponse(
+        scores=[round(s, 4) for s in scores],
+        ratio=ratio,
+        threshold=CONTAINMENT_THRESHOLD,
+        passed=ratio >= CONTAINMENT_THRESHOLD,
+    )

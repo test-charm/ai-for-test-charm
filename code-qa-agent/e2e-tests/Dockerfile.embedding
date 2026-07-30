@@ -5,6 +5,7 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debia
 WORKDIR /app
 
 ENV HF_HOME=/app/.cache/huggingface
+ENV HF_ENDPOINT=https://hf-mirror.com
 ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 COPY e2e-tests/embedding_requirements.txt /tmp/requirements.txt

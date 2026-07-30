@@ -62,7 +62,7 @@ tasks.register('cucumber', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=utf-8', '--add-opens', 'java.base/sun.net.www.protocol.http=ALL-UNNAMED'
     args = [
-        '--plugin', 'pretty',
+        '--plugin', 'teamcity',
         '--glue', 'org.testcharm',
         '--glue', 'com.github',
         project.findProperty('file') ?: 'src/test/resources/features'

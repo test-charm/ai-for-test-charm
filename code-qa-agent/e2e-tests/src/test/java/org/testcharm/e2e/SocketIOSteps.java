@@ -265,7 +265,7 @@ public class SocketIOSteps {
 
         double score = callNliAggregated(lastAgentReply, goldenText.strip());
 
-        log.info("NLI aggregated score={} threshold={}", score, threshold);
+        log.info("Containment ratio={} threshold={}", score, threshold);
 
         if (score <= threshold) {
             throw new AssertionError(String.format(
@@ -273,123 +273,28 @@ public class SocketIOSteps {
         }
     }
 
-    @SneakyThrows
-    private double callNliAggregated(String actual, String golden) {
-        // Split golden into individual factual claims (separated by blank lines)
-        String[] claims = golden.split("\\n{2,}");
-        if (claims.length <= 1) {
-            claims = golden.split("(?<=[。])\\s*");
-        }
-        if (claims.length == 1) {
-            return callNliRaw(golden.trim(), actual);
-        }
+     @SneakyThrows
+     private double callNliAggregated(String actual, String golden) {
+         // Split golden into individual factual claims (separated by blank lines)
+         String[] claims = golden.split("\\n{2,}");
+         if (claims.length <= 1) {
+             claims = golden.split("(?<=[。])\\s*");
+         }
 
-        // Preprocess reply: strip markdown fences (keep code content), then split into paragraphs
-        String clean = actual
-                .replaceAll("```[a-z]*\\n?", " ")              // strip opening fences ```lang
-                .replaceAll("\\n?```", " ")                     // strip closing fences ```
-                .replaceAll("\\|", " ")                          // strip table pipe chars
-                .replaceAll("\\*\\*|__|`", "")                  // strip bold/italic/inline-code markers
-                .replaceAll("(?m)^[-*]{3,}\\s*$", "");          // strip horizontal rules
-        String[] paragraphs = clean.split("\\n{2,}");
+         var restfulStep = new RestfulStep();
+         restfulStep.setJFactory(new JFactory());
+         restfulStep.setBaseUrl(embeddingBaseUrl);
 
-        double totalScore = 0;
-        int count = 0;
-        for (String claim : claims) {
-            String c = claim.strip();
-            if (c.length() < 10) continue;
+         var body = new org.json.JSONObject();
+         body.put("claims", claims);
+         body.put("reply", actual);
+         restfulStep.postInJson("/containment", body.toString());
 
-            String bestParagraph = selectBestParagraph(c, paragraphs, actual);
+         var scores = restfulStep.response("body.json.scores");
+         log.info("Containment scores: {}", scores);
 
-            double score = callNliRaw(c, bestParagraph);
-            log.info("NLI claim: '{}' ... → score={}", c.length() > 60 ? c.substring(0, 60) + "..." : c, score);
-            totalScore += score;
-            count++;
-        }
-        if (count == 0) return callNliRaw(golden.trim(), actual);
-        return totalScore / count;
-    }
-
-    /** Pick the semantically most relevant paragraph for the claim.
-     *  Two-stage: bigram pre-filter (top-3) → embedding similarity re-rank. */
-    private String selectBestParagraph(String claim, String[] paragraphs, String fullText) {
-        String claimNormalized = claim.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
-        if (claimNormalized.length() < 2) return fullText;
-
-        var scored = new java.util.ArrayList<Map.Entry<String, Double>>();
-        for (String para : paragraphs) {
-            String p = para.strip();
-            if (p.length() < 15) continue;
-            String pNormalized = p.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9<>=./]", "");
-            double overlap = charBigramOverlap(claimNormalized, pNormalized);
-            scored.add(new java.util.AbstractMap.SimpleEntry<>(p, overlap));
-        }
-        scored.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
-       int topN = Math.min(3, scored.size());
-        if (topN == 0) return fullText;
-
-        String best = fullText;
-        double bestScore = -1;
-        for (int i = 0; i < topN; i++) {
-            String p = scored.get(i).getKey();
-            double sim = callSimilarity(claim, p);
-           log.debug("Embedding sim for paragraph: {} → {}", p.substring(0, Math.min(80, p.length())), sim);
-           if (sim > bestScore) {
-               bestScore = sim;
-               best = p;
-           }
-       }
-       log.debug("Best paragraph for claim: {}", best.substring(0, Math.min(120, best.length())));
-
-       // Always prepend the first paragraph (core answer) for context
-       String first = paragraphs.length > 0 ? paragraphs[0].strip() : "";
-       if (!first.isEmpty() && !best.equals(first) && first.length() < 300) {
-           best = first + "\n" + best;
-       }
-       return best;
-    }
-
-    /** Simple character bigram Jaccard overlap between two normalized strings. */
-    private double charBigramOverlap(String a, String b) {
-        if (a.length() < 2 || b.length() < 2) return 0;
-        var aSet = new java.util.HashSet<String>();
-        var bSet = new java.util.HashSet<String>();
-        for (int i = 0; i < a.length() - 1; i++) aSet.add(a.substring(i, i + 2));
-        for (int i = 0; i < b.length() - 1; i++) bSet.add(b.substring(i, i + 2));
-        if (aSet.isEmpty() || bSet.isEmpty()) return 0;
-        var intersection = new java.util.HashSet<>(aSet);
-        intersection.retainAll(bSet);
-        return (double) intersection.size() / Math.min(aSet.size(), bSet.size());
-    }
-
-    @SneakyThrows
-    private double callNliRaw(String hypothesis, String premise) {
-        var restfulStep = new RestfulStep();
-        restfulStep.setJFactory(new JFactory());
-        restfulStep.setBaseUrl(embeddingBaseUrl);
-
-        var body = new org.json.JSONObject();
-        body.put("text1", hypothesis);
-        body.put("text2", premise);
-        restfulStep.postInJson("/entailment", body.toString());
-
-        return ((BigDecimal)restfulStep.response("body.json.score")).doubleValue();
-    }
-
-    /** Cosine similarity between two texts via the embedding sidecar. */
-    @SneakyThrows
-    private double callSimilarity(String text1, String text2) {
-        var restfulStep = new RestfulStep();
-        restfulStep.setJFactory(new JFactory());
-        restfulStep.setBaseUrl(embeddingBaseUrl);
-
-        var body = new org.json.JSONObject();
-        body.put("text1", text1);
-        body.put("text2", text2);
-        restfulStep.postInJson("/similarity", body.toString());
-
-        return ((BigDecimal)restfulStep.response("body.json.cosine_similarity")).doubleValue();
-    }
+         return ((BigDecimal) restfulStep.response("body.json.ratio")).doubleValue();
+     }
 
     @SneakyThrows
     private String queryLastAssistantMessage() {
