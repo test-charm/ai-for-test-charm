@@ -1197,127 +1197,104 @@
 
   场景: 主LLM遇到429错误时切换到备用LLM
     假如Mock API:
-     """
-     POST: '/v1/chat/completions'
-     ---
-     code: 429
-     body: ```
-           {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
-           ```
-     ---
-     body(LlmResponse): {
-       choices: [{
-         finishReason: 'tool_calls'
-         message: {
-           toolCalls!: [{
-             function(ListDirectory): { ... }
-           }]
-         }
-       }]
-     }
-     ---
-     body(LlmResponse): {
-       choices: [{
-         message: {
-           content: '这是备用LLM的回复。'
-         }
-       }]
-     }
-     """
+      """
+      POST: '/v1/chat/completions'
+      ---
+      code: 429
+      body: ```
+            {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
+            ```
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是备用LLM的回复。'
+          }
+        }]
+      }
+      """
     当用户发送消息"hello 429 fallback"
     那么收到的 Socket.IO 事件应满足:
-     """
-     ::eventually: {
-       receivedEvents::filter: {
-         name= new_message
-       } : [ ... {
-         data.output= ```
-                      这是备用LLM的回复。
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是备用LLM的回复。
 
-                      ---
-                      ⏱️ 耗时 0秒
-                      ```
-       } ... ]
-     }
-     """
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
     并且数据应为:
-     """
-     MockApi::filter: { POST: '/v1/chat/completions' } :
-       | body.json.model      | body.json.tool_choice | headers.Authorization      |
-       | mock-gpt             | required              | Bearer mock-key            |
-       | mock-gpt-backup      | required              | Bearer mock-backup-key     |
-       | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
-     """
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.model      | body.json.tool_choice | headers.Authorization      |
+        | mock-gpt             | required              | Bearer mock-key            |
+        | mock-gpt-backup      | required              | Bearer mock-backup-key     |
+        | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
+      """
 
   @anthropic-provider
   场景: 主LLM遇到429错误时切换到anthropic备用LLM
     假如Mock API:
-     """
-     POST: '/v1/messages'
-     ---
-     code: 429
-     body: ```
-           {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
-           ```
-     ---
-     body: ```
-           {
-             "content": [
-               {
-                 "type": "tool_use",
-                 "name": "list_directory",
-                 "input": {"path": "."}
-               }
-             ]
-           }
-           ```
-     ---
-     body: ```
-           {
-             "content": [
-               {
-                 "type": "text",
-                 "text": "这是anthropic备用LLM的回复。"
-               }
-             ]
-           }
-           ```
-     """
+      """
+      POST: '/v1/messages'
+      ---
+      code: 429
+      body: ```
+            {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
+            ```
+      ---
+      body(LlmResponseFromA): {
+        content(ListDirectoryFromA[])!: [{ ... }]
+      }
+      ---
+      body(LlmResponseFromA): {
+        content!: [{
+          type: text
+          text: '这是anthropic备用LLM的回复。'
+        }]
+      }
+      """
     当用户发送消息"hello 429 fallback"
     那么收到的 Socket.IO 事件应满足:
-     """
-     ::eventually: {
-       receivedEvents::filter: {
-         name= new_message
-       } : [ ... {
-         data.output= ```
-                      这是anthropic备用LLM的回复。
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是anthropic备用LLM的回复。
 
-                      ---
-                      ⏱️ 耗时 0秒
-                      ```
-       } ... ]
-     }
-     """
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
     并且数据应为:
-     """
-     MockApi::filter: { POST: '/v1/messages' } : [{
-       body.json: {
-         model: mock-claude
-         tool_choice.type: any
-       }
-     } {
-       body.json: {
-         model: mock-claude-backup
-         tool_choice.type: any
-       }
-     } {
-       body.json: {
-         model: mock-claude-backup
-         tool_choice: null
-       }
-     }]
-     """
+      """
+      MockApi::filter: { POST: '/v1/messages' } :
+        | body.json.model      | body.json.tool_choice | headers.X-Api-Key   |
+        | mock-claude          | { type: any }         | mock-key            |
+        | mock-claude-backup   | { type: any }         | mock-backup-key     |
+        | mock-claude-backup   | null                  | mock-backup-key     |
+      """
 
   场景: 达到最大迭代次数时返回警告
     假如Mock API:
