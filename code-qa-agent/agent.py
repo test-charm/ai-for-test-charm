@@ -115,6 +115,7 @@ def _create_llm():
             model=settings.llm_model,
             api_key=settings.llm_api_key,
             max_tokens=8192,
+            max_retries=0,
         )
         if settings.llm_base_url:
             kwargs["base_url"] = settings.llm_base_url
@@ -122,7 +123,32 @@ def _create_llm():
     kwargs = dict(model=settings.llm_model, api_key=settings.llm_api_key)
     if settings.llm_base_url:
         kwargs["base_url"] = settings.llm_base_url
-    return ChatOpenAI(**kwargs)
+    return ChatOpenAI(**kwargs, max_retries=0)
+
+
+def _create_backup_llm():
+    provider = settings.backup_llm_provider or settings.llm_provider
+    api_key = settings.backup_llm_api_key or settings.llm_api_key
+    base_url = settings.backup_llm_base_url or settings.llm_base_url
+    if provider == "anthropic":
+        kwargs: dict[str, Any] = dict(
+            model=settings.backup_llm_model,
+            api_key=api_key,
+            max_tokens=8192,
+            max_retries=0,
+        )
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatAnthropic(**kwargs)
+    kwargs = dict(model=settings.backup_llm_model, api_key=api_key)
+    if base_url:
+        kwargs["base_url"] = base_url
+    return ChatOpenAI(**kwargs, max_retries=0)
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    """Check if an exception is a 429 rate limit error."""
+    return getattr(error, "status_code", None) == 429
 
 
 class CodeQAAgent:
@@ -143,6 +169,21 @@ class CodeQAAgent:
             TOOLS,
             tool_choice=_required_tool_choice(self.provider, self.model),
         )
+        self._fallback_active = False
+        if settings.has_backup_llm:
+            self._backup_llm = _create_backup_llm()
+            self._backup_llm_with_tools = self._backup_llm.bind_tools(TOOLS)
+            self._backup_llm_with_required_tool = self._backup_llm.bind_tools(
+                TOOLS,
+                tool_choice=_required_tool_choice(
+                    settings.backup_llm_provider or settings.llm_provider,
+                    settings.backup_llm_model,
+                ),
+            )
+        else:
+            self._backup_llm = None
+            self._backup_llm_with_tools = None
+            self._backup_llm_with_required_tool = None
         self.conversations: dict[str, list] = {}
 
     def _get_messages(self, thread_id: str) -> list:
@@ -204,7 +245,20 @@ class CodeQAAgent:
                 await progress_callback(iteration + 1, settings.max_iterations, None)
 
             llm = self.llm_with_tools if has_tool_results else self.llm_with_required_tool
-            response = await llm.ainvoke(messages)
+            try:
+                response = await llm.ainvoke(messages)
+            except Exception as e:
+                if not _is_rate_limit_error(e) or self._fallback_active or self._backup_llm is None:
+                    raise
+                logger.warning(
+                    "Rate limit (429) on primary LLM, switching to backup thread=%s",
+                    thread_id,
+                )
+                self._fallback_active = True
+                self.llm_with_tools = self._backup_llm_with_tools
+                self.llm_with_required_tool = self._backup_llm_with_required_tool
+                llm = self.llm_with_tools if has_tool_results else self.llm_with_required_tool
+                response = await llm.ainvoke(messages)
             response_text = _response_text(response.content)
             tool_calls = response.tool_calls or []
             logger.info(

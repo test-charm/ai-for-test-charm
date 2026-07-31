@@ -6,6 +6,10 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o"
     llm_api_key: str = ""
     llm_base_url: str | None = None
+    backup_llm_provider: str = ""
+    backup_llm_model: str = ""
+    backup_llm_api_key: str = ""
+    backup_llm_base_url: str | None = None
     workspace_path: str = "/workspace"
     max_search_results: int = 50
     max_file_lines: int = 300
@@ -18,6 +22,10 @@ class Settings(BaseSettings):
     db_name: str = "code_qa_agent"
     db_user: str = "code_qa_agent"
     db_password: str = "code_qa_agent"
+
+    @property
+    def has_backup_llm(self) -> bool:
+        return bool(self.backup_llm_model)
 
     @property
     def database_url(self) -> str:
