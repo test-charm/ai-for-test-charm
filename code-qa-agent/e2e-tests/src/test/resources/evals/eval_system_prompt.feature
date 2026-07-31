@@ -54,3 +54,17 @@
 
       相关模块包括 jfactory-cucumber、jfactory-repo-jpa、DAL-extension-jfactory。
       """
+
+  场景: DAL-java 简介问答
+    当用户发送消息"简单介绍一下 DAL-java"
+    当收齐回复
+    而且回复蕴含度应大于 0.70:
+      """
+      DAL-java 是 Test Charm 的数据断言语言 Java 实现，定位在 JSON 和通用编程语言之间。
+
+      核心能力包括属性导航、值匹配（= 严格相等，: 宽松匹配）、列表映射、表格断言、Schema 验证。
+
+      Java 入口为 Assertions.expect 和 DAL.dal()，通过 dal.extend() 可接入不同数据源扩展。
+
+      它是整个 Test Charm 生态的数据语言基石，让一种语言描述所有数据。
+      """
