@@ -192,6 +192,9 @@ services:
       CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_BACKUP_LLM_MODEL: mock-gpt-backup
+      CQA_BACKUP_LLM_API_KEY: mock-backup-key
+      CQA_BACKUP_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
       CQA_HOST_WORKSPACE_PATH: /host/code-qa-agent
       CQA_DB_HOST: postgres

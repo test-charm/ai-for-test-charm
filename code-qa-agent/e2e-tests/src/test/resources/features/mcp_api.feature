@@ -68,3 +68,46 @@
       """
       : 重试后返回的回答。
       """
+
+  场景: MCP问答时主LLM遇到429错误后切换到备用LLM
+   假如Mock API:
+     """
+     POST: '/v1/chat/completions'
+     ---
+     code: 429
+     body: ```
+           {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
+           ```
+     ---
+     body(LlmResponse): {
+       choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         message: {
+           content: 'MCP备用LLM的回复。'
+         }
+       }]
+     }
+     """
+   当向MCP服务发送问题"what is the backup"
+   那么MCP回答应为:
+     """
+     : MCP备用LLM的回复。
+     """
+   并且数据应为:
+     """
+     MockApi::filter: { POST: '/v1/chat/completions' } :
+       | body.json.model      | body.json.tool_choice | headers.Authorization      |
+       | mock-gpt             | required              | Bearer mock-key            |
+       | mock-gpt-backup      | required              | Bearer mock-backup-key     |
+       | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
+     """
