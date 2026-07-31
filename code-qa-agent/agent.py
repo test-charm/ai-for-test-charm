@@ -169,7 +169,6 @@ class CodeQAAgent:
             TOOLS,
             tool_choice=_required_tool_choice(self.provider, self.model),
         )
-        self._fallback_active = False
         if settings.has_backup_llm:
             self._backup_llm = _create_backup_llm()
             self._backup_llm_with_tools = self._backup_llm.bind_tools(TOOLS)
@@ -229,6 +228,10 @@ class CodeQAAgent:
         else:
             messages.append(HumanMessage(content=user_input))
 
+        llm_with_tools = self.llm_with_tools
+        llm_with_required_tool = self.llm_with_required_tool
+        fallback_active = False
+
         for iteration in range(settings.max_iterations):
             has_tool_results = self._has_tool_results(messages)
             phase = "auto" if has_tool_results else _required_tool_choice(self.provider, self.model)
@@ -244,20 +247,20 @@ class CodeQAAgent:
             if progress_callback:
                 await progress_callback(iteration + 1, settings.max_iterations, None)
 
-            llm = self.llm_with_tools if has_tool_results else self.llm_with_required_tool
+            llm = llm_with_tools if has_tool_results else llm_with_required_tool
             try:
                 response = await llm.ainvoke(messages)
             except Exception as e:
-                if not _is_rate_limit_error(e) or self._fallback_active or self._backup_llm is None:
+                if not _is_rate_limit_error(e) or fallback_active or self._backup_llm is None:
                     raise
                 logger.warning(
                     "Rate limit (429) on primary LLM, switching to backup thread=%s",
                     thread_id,
                 )
-                self._fallback_active = True
-                self.llm_with_tools = self._backup_llm_with_tools
-                self.llm_with_required_tool = self._backup_llm_with_required_tool
-                llm = self.llm_with_tools if has_tool_results else self.llm_with_required_tool
+                fallback_active = True
+                llm_with_tools = self._backup_llm_with_tools
+                llm_with_required_tool = self._backup_llm_with_required_tool
+                llm = llm_with_tools if has_tool_results else llm_with_required_tool
                 response = await llm.ainvoke(messages)
             response_text = _response_text(response.content)
             tool_calls = response.tool_calls or []
