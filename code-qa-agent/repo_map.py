@@ -1,13 +1,7 @@
 """Tree-sitter based symbol extraction for repository mapping."""
 
 from pathlib import Path
-
-try:
-    from tree_sitter_languages import get_parser
-
-    TREE_SITTER_AVAILABLE = True
-except ImportError:
-    TREE_SITTER_AVAILABLE = False
+from tree_sitter_languages import get_parser
 
 EXTENSION_TO_LANG: dict[str, str] = {
     ".java": "java",
@@ -43,9 +37,6 @@ def extract_symbols(file_path: str | Path) -> list[dict]:
     Returns a list of dicts with keys:
         type, name, line, end_line, signature, parent
     """
-    if not TREE_SITTER_AVAILABLE:
-        return []
-
     lang = detect_language(file_path)
     if not lang:
         return []

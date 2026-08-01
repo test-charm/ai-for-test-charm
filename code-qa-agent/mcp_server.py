@@ -48,9 +48,7 @@ def _get_repo_name() -> str:
     """Derive repo name from workspace path (prefer host path in Docker)."""
     for var in ["CQA_HOST_WORKSPACE_PATH", "CQA_WORKSPACE_PATH"]:
         path = os.environ.get(var, "").rstrip("/")
-        name = os.path.basename(path) if path else ""
-        if name and name not in (".", "workspace", ""):
-            return name
+        return os.path.basename(path) if path else ""
     return "codebase"
 
 

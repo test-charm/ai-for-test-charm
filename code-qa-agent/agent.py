@@ -50,9 +50,7 @@ def _response_text(content: Any) -> str:
     chunks: list[str] = []
     for block in content:
         if isinstance(block, dict) and block.get("type") == "text":
-            text = block.get("text")
-            if isinstance(text, str):
-                chunks.append(text)
+            chunks.append(block.get("text"))
     return "".join(chunks)
 
 
@@ -116,13 +114,11 @@ def _create_llm():
             api_key=settings.llm_api_key,
             max_tokens=8192,
             max_retries=0,
+            base_url=settings.llm_base_url
         )
-        if settings.llm_base_url:
-            kwargs["base_url"] = settings.llm_base_url
         return ChatAnthropic(**kwargs)
     kwargs = dict(model=settings.llm_model, api_key=settings.llm_api_key)
-    if settings.llm_base_url:
-        kwargs["base_url"] = settings.llm_base_url
+    kwargs["base_url"] = settings.llm_base_url
     return ChatOpenAI(**kwargs, max_retries=0)
 
 
@@ -136,13 +132,11 @@ def _create_backup_llm():
             api_key=api_key,
             max_tokens=8192,
             max_retries=0,
+            base_url=base_url
         )
-        if base_url:
-            kwargs["base_url"] = base_url
         return ChatAnthropic(**kwargs)
     kwargs = dict(model=settings.backup_llm_model, api_key=api_key)
-    if base_url:
-        kwargs["base_url"] = base_url
+    kwargs["base_url"] = base_url
     return ChatOpenAI(**kwargs, max_retries=0)
 
 
@@ -364,10 +358,8 @@ class CodeQAAgent:
         yield ("token", "\n\n⚠️ Reached maximum iterations. Partial results above.", None)
         yield ("done", None, None)
 
-    async def ask(self, question: str, thread_id: str | None = None, progress_callback: ProgressCallback | None = None) -> str:
+    async def ask(self, question: str, thread_id: str = str(uuid.uuid4()), progress_callback: ProgressCallback | None = None) -> str:
         """Run the full ReAct loop and return the final answer (non-streaming)."""
-        if thread_id is None:
-            thread_id = str(uuid.uuid4())
         answer = ""
         async for event_type, token, _data in self.astream_response(question, thread_id, progress_callback):
             if event_type == "token":
