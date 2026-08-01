@@ -33,6 +33,9 @@ public class SocketIOClient {
     private final String wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
     private final AtomicInteger pollCount = new AtomicInteger(0);
     private final AtomicInteger pollErrorCount = new AtomicInteger(0);
+    private Map<String, String> lastAuth;
+    private static final int MAX_CONSECUTIVE_ERRORS = 5;
+    private static final int MAX_RECONNECT_ATTEMPTS = 3;
 
     @Autowired
     @Lazy
@@ -46,10 +49,12 @@ public class SocketIOClient {
     private String baseUrl;
 
     /** Dedicated RestfulStep for the poll thread to avoid lock contention with the test thread. */
-    private RestfulStep pollStep;
+    private volatile RestfulStep pollStep;
 
     public void connect(Map<String, String> auth) throws Exception {
-        stopPollThread();
+        stopPollThread(true);
+
+        this.lastAuth = new HashMap<>(auth);
 
         // Step 1: Engine.IO handshake
         String handshakeResp = testHttpGet(wsBasePath);
@@ -88,6 +93,8 @@ public class SocketIOClient {
 
     private void pollLoop(int generation) {
         log.info("Poll loop started generation={}", generation);
+        int consecutiveErrors = 0;
+        int reconnectAttempts = 0;
         while (running && generation == connectionGeneration) {
             int count = pollCount.incrementAndGet();
             try {
@@ -122,6 +129,8 @@ public class SocketIOClient {
                 } else {
                     log.debug("Poll #{} received empty response", count);
                 }
+                // Reset consecutive errors on successful poll
+                consecutiveErrors = 0;
                 // Prevent tight-looping: always yield between polls
                 if (running && generation == connectionGeneration) {
                     Thread.sleep(50);
@@ -132,10 +141,31 @@ public class SocketIOClient {
                 break;
             } catch (Exception e) {
                 int errCount = pollErrorCount.incrementAndGet();
-                log.error("Poll #{} error (total errors={}): {}", count, errCount, e.toString());
+                consecutiveErrors++;
+                log.error("Poll #{} error (total errors={}, consecutive={}): {}",
+                        count, errCount, consecutiveErrors, e.toString());
                 if (running && generation == connectionGeneration) {
                     receivedEvents.add(Map.of("name", "poll_error",
                             "data", Map.of("message", e.getMessage())));
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS
+                            && reconnectAttempts < MAX_RECONNECT_ATTEMPTS
+                            && lastAuth != null) {
+                        log.warn("Poll loop has {} consecutive errors, attempting reconnect {}/{}",
+                                consecutiveErrors, reconnectAttempts + 1, MAX_RECONNECT_ATTEMPTS);
+                        boolean reconnected = attemptReconnect();
+                        reconnectAttempts++;
+                        if (reconnected) {
+                            consecutiveErrors = 0;
+                            continue;
+                        }
+                        log.error("Reconnect attempt {} failed", reconnectAttempts);
+                    }
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS * 2) {
+                        log.error("Too many consecutive poll errors ({}), stopping poll loop", consecutiveErrors);
+                        receivedEvents.add(Map.of("name", "connection_lost",
+                                "data", Map.of("message", "Poll loop lost connection after " + consecutiveErrors + " errors")));
+                        break;
+                    }
                     try { Thread.sleep(500); } catch (InterruptedException ignored) { break; }
                 }
             }
@@ -159,13 +189,15 @@ public class SocketIOClient {
     // ── poll-thread HTTP (uses dedicated RestfulStep) ──
 
     private String pollHttpGet(String path) {
-        pollStep.get(path);
-        return pollStep.response("body.string");
+        RestfulStep step = this.pollStep;
+        step.get(path);
+        return step.response("body.string");
     }
 
     private String pollHttpPost(String path, String body) {
-        pollStep.post(path, "text/plain", body);
-        return pollStep.response("body.string");
+        RestfulStep step = this.pollStep;
+        step.post(path, "text/plain", body);
+        return step.response("body.string");
     }
 
     private void processMessages(String text) {
@@ -201,6 +233,14 @@ public class SocketIOClient {
                 try {
                     pollHttpPost(wsBasePath + "&sid=" + engineSid, "3");
                 } catch (Exception ignored) {}
+            } else if (engineType == '3') {
+                // Server pong — no action needed
+                log.debug("Received Engine.IO pong");
+            } else if (engineType == '1') {
+                // Server closed the transport
+                log.warn("Received Engine.IO close packet, session may be invalid");
+                receivedEvents.add(Map.of("name", "engine_close",
+                        "data", Map.of("message", "Engine.IO close packet received")));
             }
         }
     }
@@ -279,21 +319,64 @@ public class SocketIOClient {
     }
 
     public void clear() {
-        stopPollThread();
+        stopPollThread(false);
         receivedEvents.clear();
         connected = false;
     }
 
-    private void stopPollThread() {
+    private void stopPollThread(boolean wait) {
         running = false;
         connectionGeneration++;
-        if (pollThread != null) {
-            pollThread.interrupt();
-            try {
-                pollThread.join(1);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
+        Thread old = pollThread;
+        pollThread = null;
+        if (old != null) {
+            old.interrupt();
+            if (wait) {
+                try {
+                    old.join(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
+        }
+    }
+
+    /** Attempt to re-establish the Socket.IO connection from within the poll thread. */
+    private boolean attemptReconnect() {
+        try {
+            // Step 1: Engine.IO handshake
+            String handshakeResp = pollHttpGet(wsBasePath);
+            if (handshakeResp == null || !handshakeResp.startsWith("0")) {
+                log.error("Reconnect handshake failed: {}", handshakeResp);
+                return false;
+            }
+            String handshakeData = handshakeResp.substring(1);
+            JSONObject hso = new JSONObject(handshakeData);
+            String newSid = hso.optString("sid");
+            if (newSid == null || newSid.isEmpty()) {
+                log.error("Reconnect handshake: no sid in response");
+                return false;
+            }
+
+            // Step 2: Send CONNECT packet
+            JSONObject authJson = new JSONObject(lastAuth);
+            String connectBody = "40" + authJson;
+            String connectResp = pollHttpPost(wsBasePath + "&sid=" + newSid, connectBody);
+            if (!"OK".equals(connectResp)) {
+                log.error("Reconnect CONNECT failed: {}", connectResp);
+                return false;
+            }
+
+            // Step 3: Update state
+            this.engineSid = newSid;
+            this.pollSeq = 0;
+            log.info("Reconnect successful, new sid={}", newSid);
+            receivedEvents.add(Map.of("name", "reconnected",
+                    "data", Map.of("message", "Reconnected with new session")));
+            return true;
+        } catch (Exception e) {
+            log.error("Reconnect attempt failed: {}", e.toString());
+            return false;
         }
     }
 }
