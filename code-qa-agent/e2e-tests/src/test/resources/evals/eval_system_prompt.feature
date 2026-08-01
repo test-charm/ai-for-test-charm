@@ -68,3 +68,17 @@
 
       它是整个 Test Charm 生态的数据语言基石，让一种语言描述所有数据。
       """
+
+  场景: RESTful-cucumber 简介问答
+    当用户发送消息"简单介绍一下 RESTful-cucumber"
+    当收齐回复
+    而且回复蕴含度应大于 0.70:
+      """
+      RESTful-cucumber 将 HTTP 请求、请求体构造、响应断言封装为声明式 Step。
+
+      RestfulStep 定义公开 step：GET/DELETE/POST/PUT/PATCH，支持 doc-string 中 ::headers 内联语法设置请求头。
+
+      响应校验用 `response should be:` 以 DAL 表达式断言状态码、body、headers。
+
+      深度集成 JFactory，支持 Spec/Trait 生成请求体。与 DAL-java 配合，请求与校验风格统一。
+      """
