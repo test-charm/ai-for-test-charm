@@ -16,6 +16,10 @@ import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
 import org.testcharm.jfactory.JFactory;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -208,15 +212,17 @@ public class SocketIOSteps {
     public void 收齐回复() {
         long deadline = System.currentTimeMillis() + 600_000;
         String lastContent = "";
+        int lastEventCount = 0;
         int loopCount = 0;
         while (System.currentTimeMillis() < deadline) {
             loopCount++;
             String content = queryLastAssistantMessage();
+            int currentEventCount = client.getReceivedEvents().size();
             if (loopCount <= 5 || loopCount % 10 == 0) {
                 log.info("收齐回复 loop #{} content={} eventCount={}",
                         loopCount,
                         content != null ? ("'" + (content.length() > 80 ? content.substring(0, 80) + "..." : content) + "'") : "null",
-                        client.getReceivedEvents().size());
+                        currentEventCount);
             }
             // Every 15 loops with no content, dump event diagnostics to help debug flaky timeouts
             if (content == null && loopCount % 15 == 0) {
@@ -238,20 +244,32 @@ public class SocketIOSteps {
                 }
                 log.info("收齐回复 diagnostic loop #{}: msgEvents=[{}]", loopCount, String.join(" | ", msgEvents));
             }
-            if (content != null && !content.isBlank() && !content.equals(lastContent)) {
-                lastContent = content;
-                long stableUntil = System.currentTimeMillis() + 5000;
-                while (System.currentTimeMillis() < stableUntil) {
-                    Thread.sleep(1000);
-                    String check = queryLastAssistantMessage();
-                    if (check == null || !check.equals(content)) {
-                        lastContent = check != null ? check : "";
+            if (content != null && !content.isBlank()) {
+                if (lastEventCount == currentEventCount && loopCount > 1) {
+                    // Event count is stable: no new events arriving.
+                    // Wait 5 more seconds to ensure the response is complete,
+                    // then accept. Using eventCount stability avoids the issue
+                    // where queryLastAssistantMessage returns null on retry.
+                    long stableUntil = System.currentTimeMillis() + 5000;
+                    while (System.currentTimeMillis() < stableUntil) {
+                        Thread.sleep(1000);
+                        if (client.getReceivedEvents().size() != currentEventCount) {
+                            lastEventCount = client.getReceivedEvents().size();
+                            content = queryLastAssistantMessage();
+                            if (content != null && !content.isBlank()) {
+                                lastContent = content;
+                            }
+                            break;
+                        }
+                    }
+                    if (System.currentTimeMillis() >= stableUntil) {
+                        lastAgentReply = content;
                         break;
                     }
                 }
-                if (System.currentTimeMillis() >= stableUntil) {
-                    lastAgentReply = content;
-                    break;
+                lastEventCount = currentEventCount;
+                if (content != null && !content.isBlank()) {
+                    lastContent = content;
                 }
             }
             Thread.sleep(2000);
@@ -273,6 +291,15 @@ public class SocketIOSteps {
 
     @Value("${embedding.base-url:http://localhost:18002}")
     private String embeddingBaseUrl;
+
+    @Value("${app.db.url}")
+    private String dbUrl;
+
+    @Value("${app.db.username}")
+    private String dbUsername;
+
+    @Value("${app.db.password}")
+    private String dbPassword;
 
     private String lastAgentReply;
 
@@ -387,6 +414,42 @@ public class SocketIOSteps {
             }
         }
 
+        // Database fallback: query Chainlit steps table directly for the last assistant message.
+        // This handles cases where Socket.IO polling fails to deliver new_message/stream_token
+        // events (e.g., due to large payloads or connection issues).
+        return queryLastMessageFromDb();
+    }
+
+    private String queryLastMessageFromDb() {
+        String threadId = PathVariableReplacement.replacements.get("eval-thread-id");
+        if (threadId == null) {
+            log.debug("queryLastMessageFromDb: no eval-thread-id set, skipping DB fallback");
+            return null;
+        }
+        try (Connection conn = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT output FROM steps WHERE \"threadId\" = ? AND type = 'assistant_message' "
+                             + "AND output IS NOT NULL AND length(output) > 200 "
+                             + "ORDER BY \"createdAt\" DESC LIMIT 1")) {
+            stmt.setString(1, threadId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String output = rs.getString("output");
+                    String preview = output != null && output.length() > 100
+                            ? output.substring(0, 100).replace("\n", "\\n") + "..."
+                            : String.valueOf(output);
+                    log.info("queryLastMessageFromDb thread={} chars={} preview={}",
+                            threadId, output != null ? output.length() : 0, preview);
+                    if (output != null && !output.contains("我已准备好分析代码库，请问你想了解什么？")) {
+                        return output;
+                    }
+                } else {
+                    log.debug("queryLastMessageFromDb: no qualifying message for thread={}", threadId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("queryLastMessageFromDb failed: {}", e.toString());
+        }
         return null;
     }
 

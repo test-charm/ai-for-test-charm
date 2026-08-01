@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.jfactory.JFactory;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -33,9 +32,6 @@ public class SocketIOClient {
     private final String wsBasePath = "/ws/socket.io/?EIO=4&transport=polling";
     private final AtomicInteger pollCount = new AtomicInteger(0);
     private final AtomicInteger pollErrorCount = new AtomicInteger(0);
-    private Map<String, String> lastAuth;
-    private static final int MAX_CONSECUTIVE_ERRORS = 5;
-    private static final int MAX_RECONNECT_ATTEMPTS = 3;
 
     @Autowired
     @Lazy
@@ -53,8 +49,6 @@ public class SocketIOClient {
 
     public void connect(Map<String, String> auth) throws Exception {
         stopPollThread(true);
-
-        this.lastAuth = new HashMap<>(auth);
 
         // Step 1: Engine.IO handshake
         String handshakeResp = httpGet(restfulStep, wsBasePath);
@@ -94,7 +88,6 @@ public class SocketIOClient {
     private void pollLoop(int generation) {
         log.info("Poll loop started generation={}", generation);
         int consecutiveErrors = 0;
-        int reconnectAttempts = 0;
         while (running && generation == connectionGeneration) {
             int count = pollCount.incrementAndGet();
             try {
@@ -147,24 +140,10 @@ public class SocketIOClient {
                 if (running && generation == connectionGeneration) {
                     receivedEvents.add(Map.of("name", "poll_error",
                             "data", Map.of("message", e.getMessage())));
-                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS
-                            && reconnectAttempts < MAX_RECONNECT_ATTEMPTS
-                            && lastAuth != null) {
-                        log.warn("Poll loop has {} consecutive errors, attempting reconnect {}/{}",
-                                consecutiveErrors, reconnectAttempts + 1, MAX_RECONNECT_ATTEMPTS);
-                        boolean reconnected = attemptReconnect();
-                        reconnectAttempts++;
-                        if (reconnected) {
-                            consecutiveErrors = 0;
-                            continue;
-                        }
-                        log.error("Reconnect attempt {} failed", reconnectAttempts);
-                    }
-                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS * 2) {
-                        log.error("Too many consecutive poll errors ({}), stopping poll loop", consecutiveErrors);
-                        receivedEvents.add(Map.of("name", "connection_lost",
-                                "data", Map.of("message", "Poll loop lost connection after " + consecutiveErrors + " errors")));
-                        break;
+                    // Keep polling — never give up. The test will eventually time out
+                    // if the session is truly broken, and diagnostic logs will show the cause.
+                    if (consecutiveErrors > 0 && consecutiveErrors % 10 == 0) {
+                        log.warn("Poll loop has {} consecutive errors, still retrying", consecutiveErrors);
                     }
                     try { Thread.sleep(500); } catch (InterruptedException ignored) { break; }
                 }
@@ -327,42 +306,4 @@ public class SocketIOClient {
         }
     }
 
-    /** Attempt to re-establish the Socket.IO connection from within the poll thread. */
-    private boolean attemptReconnect() {
-        try {
-            // Step 1: Engine.IO handshake
-            String handshakeResp = httpGet(pollStep, wsBasePath);
-            if (handshakeResp == null || !handshakeResp.startsWith("0")) {
-                log.error("Reconnect handshake failed: {}", handshakeResp);
-                return false;
-            }
-            String handshakeData = handshakeResp.substring(1);
-            JSONObject hso = new JSONObject(handshakeData);
-            String newSid = hso.optString("sid");
-            if (newSid == null || newSid.isEmpty()) {
-                log.error("Reconnect handshake: no sid in response");
-                return false;
-            }
-
-            // Step 2: Send CONNECT packet
-            JSONObject authJson = new JSONObject(lastAuth);
-            String connectBody = "40" + authJson;
-            String connectResp = httpPost(pollStep, wsBasePath + "&sid=" + newSid, connectBody);
-            if (!"OK".equals(connectResp)) {
-                log.error("Reconnect CONNECT failed: {}", connectResp);
-                return false;
-            }
-
-            // Step 3: Update state
-            this.engineSid = newSid;
-            this.pollSeq = 0;
-            log.info("Reconnect successful, new sid={}", newSid);
-            receivedEvents.add(Map.of("name", "reconnected",
-                    "data", Map.of("message", "Reconnected with new session")));
-            return true;
-        } catch (Exception e) {
-            log.error("Reconnect attempt failed: {}", e.toString());
-            return false;
-        }
-    }
 }
