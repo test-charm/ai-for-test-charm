@@ -57,7 +57,7 @@ public class SocketIOClient {
         this.lastAuth = new HashMap<>(auth);
 
         // Step 1: Engine.IO handshake
-        String handshakeResp = testHttpGet(wsBasePath);
+        String handshakeResp = httpGet(restfulStep, wsBasePath);
 
         // Parse sid from "0{...}"
         if (handshakeResp.startsWith("0")) {
@@ -72,7 +72,7 @@ public class SocketIOClient {
         // Step 2: Send CONNECT packet
         JSONObject authJson = new JSONObject(auth);
         String connectBody = "40" + authJson;
-        String connectResp = testHttpPost(wsBasePath + "&sid=" + engineSid, connectBody);
+        String connectResp = httpPost(restfulStep, wsBasePath + "&sid=" + engineSid, connectBody);
         if (!"OK".equals(connectResp)) {
             throw new RuntimeException("CONNECT failed: " + connectResp);
         }
@@ -101,12 +101,12 @@ public class SocketIOClient {
                 if (count <= 3 || count % 10 == 0) {
                     log.info("Poll #{} starting GET sid={} running={}", count, engineSid, running);
                 }
-                String resp = pollHttpGet(wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
+                String resp = httpGet(pollStep, wsBasePath + "&sid=" + engineSid + "&t=" + (pollSeq++));
                 if (resp != null && !resp.isEmpty()) {
                     // Handle Engine.IO ping: a lone "2" character
                     if (resp.equals("2")) {
                         try {
-                            pollHttpPost(wsBasePath + "&sid=" + engineSid, "3");
+                            httpPost(pollStep, wsBasePath + "&sid=" + engineSid, "3");
                         } catch (Exception ignored) {}
                         if (running && generation == connectionGeneration) {
                             Thread.sleep(50);
@@ -174,28 +174,14 @@ public class SocketIOClient {
                 generation, running, connectionGeneration);
     }
 
-    // ── test-thread HTTP (uses RestfulStep) ──
+    // ── HTTP helpers (thread-safe: caller passes the RestfulStep to use) ──
 
-    private String testHttpGet(String path) {
-        restfulStep.get(path);
-        return restfulStep.response("body.string");
-    }
-
-    private String testHttpPost(String path, String body) throws IOException {
-        restfulStep.post(path, "text/plain", body);
-        return restfulStep.response("body.string");
-    }
-
-    // ── poll-thread HTTP (uses dedicated RestfulStep) ──
-
-    private String pollHttpGet(String path) {
-        RestfulStep step = this.pollStep;
+    private String httpGet(RestfulStep step, String path) {
         step.get(path);
         return step.response("body.string");
     }
 
-    private String pollHttpPost(String path, String body) {
-        RestfulStep step = this.pollStep;
+    private String httpPost(RestfulStep step, String path, String body) {
         step.post(path, "text/plain", body);
         return step.response("body.string");
     }
@@ -231,7 +217,7 @@ public class SocketIOClient {
                 handleSocketMessage(socketType, payload);
             } else if (engineType == '2') {
                 try {
-                    pollHttpPost(wsBasePath + "&sid=" + engineSid, "3");
+                    httpPost(pollStep, wsBasePath + "&sid=" + engineSid, "3");
                 } catch (Exception ignored) {}
             } else if (engineType == '3') {
                 // Server pong — no action needed
@@ -303,12 +289,12 @@ public class SocketIOClient {
                 arr.put(item);
             }
         }
-        IOException lastEx = null;
+        Exception lastEx = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             try {
-                testHttpPost(wsBasePath + "&sid=" + engineSid, "42" + arr);
+                httpPost(restfulStep, wsBasePath + "&sid=" + engineSid, "42" + arr);
                 return;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 lastEx = e;
                 if (attempt < 2) {
                     try { Thread.sleep(200L * (attempt + 1)); } catch (InterruptedException ignored) {}
@@ -345,7 +331,7 @@ public class SocketIOClient {
     private boolean attemptReconnect() {
         try {
             // Step 1: Engine.IO handshake
-            String handshakeResp = pollHttpGet(wsBasePath);
+            String handshakeResp = httpGet(pollStep, wsBasePath);
             if (handshakeResp == null || !handshakeResp.startsWith("0")) {
                 log.error("Reconnect handshake failed: {}", handshakeResp);
                 return false;
@@ -361,7 +347,7 @@ public class SocketIOClient {
             // Step 2: Send CONNECT packet
             JSONObject authJson = new JSONObject(lastAuth);
             String connectBody = "40" + authJson;
-            String connectResp = pollHttpPost(wsBasePath + "&sid=" + newSid, connectBody);
+            String connectResp = httpPost(pollStep, wsBasePath + "&sid=" + newSid, connectBody);
             if (!"OK".equals(connectResp)) {
                 log.error("Reconnect CONNECT failed: {}", connectResp);
                 return false;
