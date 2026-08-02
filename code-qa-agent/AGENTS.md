@@ -1,5 +1,10 @@
 # Copilot Instructions — code-qa-agent/
 
+## 硬性约束：任何代码改动前，必须先完成以下自检
+1. 如果是新功能 → 先写 e2e 测试，确认测试失败，再写实现
+2. 如果是修 bug → 先写能复现 bug 的测试，确认失败，再修代码
+3. 如果是重构 → 确认已有测试覆盖，重构后运行全量测试
+
 ## 项目概述
 
 Python LangGraph ReAct Agent，提供代码库智能问答服务（Chainlit UI + MCP Server）。
