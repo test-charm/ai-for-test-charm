@@ -85,6 +85,15 @@ def create_mcp_server(host: str = "0.0.0.0", port: int = 3001) -> FastMCP:
         answer = await agent.ask(question, progress_callback=on_progress)
         logger.info(f"MCP tool answer ({len(answer)} chars)")
 
+        # Persist the request/response
+        from mcp_recorder import save_mcp_request
+        await save_mcp_request(
+            question=question,
+            answer=answer,
+            provider=agent.provider,
+            model=agent.model,
+        )
+
         # Save coverage data after each request
         if _coverage_data_file:
             try:

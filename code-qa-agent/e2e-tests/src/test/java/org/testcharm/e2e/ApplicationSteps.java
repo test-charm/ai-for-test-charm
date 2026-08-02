@@ -65,7 +65,7 @@ public class ApplicationSteps {
                 Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
                 Statement statement = connection.createStatement()
         ) {
-            statement.execute("TRUNCATE TABLE feedbacks, elements, steps, threads, users CASCADE");
+            statement.execute("TRUNCATE TABLE feedbacks, elements, steps, threads, users, mcp_requests CASCADE");
         } catch (Exception e) {
             throw new RuntimeException("Failed to clear e2e database", e);
         }

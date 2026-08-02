@@ -111,3 +111,38 @@
        | mock-gpt-backup      | required              | Bearer mock-backup-key     |
        | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
      """
+
+  场景: MCP问答请求和回复持久化到数据库
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+         finishReason: 'tool_calls'
+         message: {
+           toolCalls!: [{
+             function(ListDirectory): { ... }
+           }]
+         }
+       }]
+     }
+     ---
+     body(LlmResponse): {
+       choices: [{
+         message: {
+           content: '持久化测试回答内容。'
+         }
+       }]
+     }
+     """
+    当向MCP服务发送问题"persist this question"
+    那么MCP回答应为:
+      """
+      : 持久化测试回答内容。
+      """
+    并且数据应为:
+      """
+      McpRequest: | id    | question              | answer            | provider | model    | createdAt |
+                  | {...} | persist this question | 持久化测试回答内容。 | openai   | mock-gpt | {...}     |
+      """

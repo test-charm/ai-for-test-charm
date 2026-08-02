@@ -33,6 +33,7 @@ dependencies {
     testImplementation('org.projectlombok:lombok:1.18.32')
 
     testImplementation("org.springframework.boot:spring-boot-starter-test:${springBootVersion}")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}")
     testImplementation("io.cucumber:cucumber-java:${cucumberVersion}")
     testImplementation("io.cucumber:cucumber-spring:${cucumberVersion}")
 

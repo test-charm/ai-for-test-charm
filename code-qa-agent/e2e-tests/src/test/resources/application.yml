@@ -1,3 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres.tool.net:5432/code_qa_agent
+    username: code_qa_agent
+    password: code_qa_agent
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
 app:
   base-url: http://localhost:18000
   db:

@@ -1,17 +1,15 @@
 package org.testcharm.e2e;
 
-import org.testcharm.jfactory.CompositeDataRepository;
-import org.testcharm.jfactory.DataRepository;
-import org.testcharm.jfactory.JFactory;
-import org.testcharm.jfactory.MemoryDataRepository;
-import org.testcharm.jfactory.Spec;
-import org.testcharm.util.Classes;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceUnit;
 import lombok.SneakyThrows;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.model.HttpRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.testcharm.jfactory.*;
+import org.testcharm.util.Classes;
 
 import java.net.URL;
 import java.util.Collection;
@@ -30,12 +28,16 @@ public class Factories {
         };
     }
 
+    @PersistenceUnit
+    private EntityManagerFactory entityManagerFactory;
+
     @Bean
     @SuppressWarnings({"rawtypes", "unchecked"})
     public JFactory factorySet(DALMockServer dalMockServer) {
         var jFactory = new JFactory(
                 new CompositeDataRepository(new MemoryDataRepository())
                         .registerByType(HttpRequest.class, new MockServerDataRepository(dalMockServer))
+                        .registerByPackage("org.testcharm.e2e.entity", new JPADataRepository(entityManagerFactory.createEntityManager()))
         );
         Classes.subTypesOf(Spec.class, "org.testcharm.e2e.spec")
                 .forEach(spec -> jFactory.register((Class) spec));

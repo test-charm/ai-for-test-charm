@@ -6,8 +6,9 @@ import sys
 from sqlalchemy import create_engine, text
 
 from config import settings
+from mcp_recorder import MCP_REQUESTS_TABLE_SQL
 
-SCHEMA = """
+SCHEMA = MCP_REQUESTS_TABLE_SQL + "\n" + """
 CREATE TABLE IF NOT EXISTS users (
     "id" TEXT PRIMARY KEY,
     "identifier" TEXT NOT NULL UNIQUE,
