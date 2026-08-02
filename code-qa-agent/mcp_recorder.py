@@ -1,9 +1,12 @@
-"""Persist MCP request/response records to PostgreSQL."""
+"""Persist MCP request/response records to PostgreSQL via SQLAlchemy ORM."""
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
+
+from sqlalchemy import Column, Text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from config import settings
 
@@ -21,6 +24,34 @@ CREATE TABLE IF NOT EXISTS mcp_requests (
 """
 
 
+class Base(DeclarativeBase):
+    pass
+
+
+class McpRequest(Base):
+    __tablename__ = "mcp_requests"
+
+    id = Column(Text, primary_key=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    provider = Column(Text)
+    model = Column(Text)
+    created_at = Column(Text)
+
+
+_engine = None
+_sessionmaker = None
+
+
+def _get_sessionmaker() -> sessionmaker:
+    global _engine, _sessionmaker
+    if _engine is None:
+        _engine = create_async_engine(settings.database_url, echo=False)
+    if _sessionmaker is None:
+        _sessionmaker = sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
+    return _sessionmaker
+
+
 async def save_mcp_request(
     question: str,
     answer: str,
@@ -29,34 +60,16 @@ async def save_mcp_request(
 ) -> None:
     """Save an MCP question/answer pair to the database."""
     try:
-        conn = await asyncio.wait_for(
-            _get_connection(),
-            timeout=5.0,
-        )
-        try:
-            await conn.execute(
-                "INSERT INTO mcp_requests (\"id\", \"question\", \"answer\", \"provider\", \"model\", \"created_at\") "
-                "VALUES ($1, $2, $3, $4, $5, $6)",
-                str(uuid.uuid4()),
-                question,
-                answer,
-                provider,
-                model,
-                datetime.now(timezone.utc).isoformat(),
-            )
-        finally:
-            await conn.close()
+        sm = _get_sessionmaker()
+        async with sm() as session:
+            session.add(McpRequest(
+                id=str(uuid.uuid4()),
+                question=question,
+                answer=answer,
+                provider=provider,
+                model=model,
+                created_at=datetime.now(timezone.utc).isoformat(),
+            ))
+            await session.commit()
     except Exception:
         logger.exception("Failed to save MCP request record")
-
-
-async def _get_connection():
-    """Create a new asyncpg connection."""
-    import asyncpg
-    return await asyncpg.connect(
-        host=settings.db_host,
-        port=settings.db_port,
-        database=settings.db_name,
-        user=settings.db_user,
-        password=settings.db_password,
-    )

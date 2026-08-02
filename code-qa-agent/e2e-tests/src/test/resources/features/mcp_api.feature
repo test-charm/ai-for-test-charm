@@ -143,6 +143,6 @@
       """
     并且数据应为:
       """
-      McpRequest: | id    | question              | answer            | provider | model    | createdAt |
-                  | {...} | persist this question | 持久化测试回答内容。 | openai   | mock-gpt | {...}     |
+      McpRequest: | id    | question              | answer            | provider | model    | createdAt    |
+                  | {...} | persist this question | 持久化测试回答内容。 | openai   | mock-gpt | is AlmostNow |
       """
