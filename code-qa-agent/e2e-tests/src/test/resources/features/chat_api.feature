@@ -508,6 +508,55 @@
      }]
      """
 
+  场景: 长耗时回复显示分钟和秒
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      delayResponse: 70
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是一个长耗时mock回复。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"hello long response"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually::in(120s): {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       这是一个长耗时mock回复。
+
+                       ---
+                       ⏱️ 耗时 1分10秒
+                       ```
+        } ... ]
+      }
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.tool_choice |
+        | required              |
+        | null                  |
+      """
+
   场景: 无工具调用时模型被要求重试
     假如Mock API:
       """
