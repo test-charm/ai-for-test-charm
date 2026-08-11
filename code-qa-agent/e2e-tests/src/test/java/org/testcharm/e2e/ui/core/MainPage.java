@@ -11,8 +11,7 @@ public class MainPage extends BasePage implements ProxyObject {
 
     public MainPage(Element element) {
         super(element);
-        var sideBar = locate("css[text-sidebar-foreground]");
-        menu = new Menu(sideBar.list().isEmpty() ? element : sideBar.single());
+        menu = new Menu(locate("css[.text-sidebar-foreground]").single());
     }
 
     @Override
@@ -48,7 +47,7 @@ public class MainPage extends BasePage implements ProxyObject {
                 public NavigationPage create() {
                     return switch (name) {
                         default ->
-                                new ListPage(MainPage.this.locate("css[main]").single(), workingSpace, name, MainPage.this, name.replace("列表", ""));
+                                new ListPage(MainPage.this.locate("css[main]").single(), workingSpace, name, MainPage.this, name);
                     };
                 }
 

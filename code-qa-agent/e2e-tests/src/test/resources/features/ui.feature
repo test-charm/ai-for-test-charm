@@ -23,43 +23,24 @@
       """
       POST: '/v1/chat/completions'
       ---
-      body: ```
-            {
-              "created": 1752050400,
-              "choices": [
-                {
-                  "finish_reason": "tool_calls",
-                  "message": {
-                    "role": "assistant",
-                    "tool_calls": [
-                      {
-                        "id": "call_1",
-                        "function": {
-                          "name": "list_directory",
-                          "arguments": "{\"path\": \".\", \"max_depth\": 1}"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
       ---
-      body: ```
-            {
-              "created": 1752050401,
-              "choices": [
-                {
-                  "finish_reason": "stop",
-                  "message": {
-                    "role": "assistant",
-                    "content": "这是一个mock回复。"
-                  }
-                }
-              ]
-            }
-            ```
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '这是一个mock回复。'
+          }
+        }]
+      }
       """
     当用户操作:
       """

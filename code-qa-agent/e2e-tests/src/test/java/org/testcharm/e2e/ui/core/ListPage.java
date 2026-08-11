@@ -43,7 +43,7 @@ public class ListPage extends BasePage implements Iterable, NavigationPage {
                 (::await: {
                     ::filter!: { ::values.text[]: [... $rowIdentifier ...] }
                 })[0]
-                """, ValuesOf.value("rowIdentifier", rowIdentifier));
+                """, Map.of("rowIdentifier", rowIdentifier));
     }
 
     public DetailPage 详情(String rowIdentifier) {

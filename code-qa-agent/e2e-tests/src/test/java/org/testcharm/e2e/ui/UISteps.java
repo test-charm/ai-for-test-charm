@@ -4,7 +4,6 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +41,8 @@ public class UISteps {
     }
 
     @After("@ui-login or @close-browser")
-    public void closeBrowser(Scenario scenario) {
-        playwrightBrowser.close(scenario);
+    public void closeBrowser() {
+        playwrightBrowser.close();
     }
 
     @当("操作:")
