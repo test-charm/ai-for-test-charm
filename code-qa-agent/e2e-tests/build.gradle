@@ -42,6 +42,7 @@ dependencies {
     testImplementation("org.test-charm:RESTful-cucumber:${testCharmVersion}")
     testImplementation("org.test-charm:DAL-java:${testCharmVersion}")
     testImplementation("org.test-charm:DAL-extension-basic:${testCharmVersion}")
+    testImplementation("org.test-charm:page-flow-playwright:${testCharmVersion}")
 
     testImplementation('org.mock-server:mockserver-client-java:5.15.0')
     testImplementation('commons-fileupload:commons-fileupload:1.5')

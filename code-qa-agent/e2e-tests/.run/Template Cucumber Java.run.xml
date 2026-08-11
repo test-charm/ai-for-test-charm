@@ -1,5 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="true" type="CucumberJavaRunConfigurationType" factoryName="Cucumber java">
+    <envs>
+      <env name="PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" value="1" />
+    </envs>
     <option name="GLUE" value="org.testcharm" />
     <shortenClasspath name="NONE" />
     <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />

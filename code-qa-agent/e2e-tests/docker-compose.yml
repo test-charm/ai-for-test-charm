@@ -77,6 +77,33 @@ services:
       retries: 30
       start_period: 300s
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - dashboard.net
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.50.1-noble
+    ports:
+      - "13000:3000"
+    command: [ "npx", "-y", "playwright@1.50.1", "run-server", "--port", "3000", "--host", "0.0.0.0" ]
+    environment:
+      DISPLAY: web-driver.tool.net:99.0
+    networks:
+      default:
+        aliases:
+          - playwright.tool.net
+  
+  web-driver:
+    image: selenium/standalone-chrome:4.0.0-beta-3-20210426
+    ports:
+      - '14444:4444'
+      - '17900:7900'
+    shm_size: 2gb
+    networks:
+      default:
+        aliases:
+          - web-driver.tool.net
 
   code-qa-agent-deepseek:
     <<: *e2e-image
