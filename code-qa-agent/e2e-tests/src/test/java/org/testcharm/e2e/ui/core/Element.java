@@ -97,4 +97,10 @@ public class Element extends PlaywrightElement<Element, PlaywrightPageFlow> {
         raw().click(new Locator.ClickOptions().setForce(true));
         return this;
     }
+
+    public Elements<Element> id(String id) {
+        return locate("""
+                xpath["//*[@id='%s']"]
+                """.formatted(id));
+    }
 }

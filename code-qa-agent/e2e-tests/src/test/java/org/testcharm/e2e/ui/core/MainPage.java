@@ -11,7 +11,7 @@ public class MainPage extends BasePage implements ProxyObject {
 
     public MainPage(Element element) {
         super(element);
-        var sideBar = locate("css[.sidebar-container]");
+        var sideBar = locate("css[text-sidebar-foreground]");
         menu = new Menu(sideBar.list().isEmpty() ? element : sideBar.single());
     }
 
@@ -36,9 +36,9 @@ public class MainPage extends BasePage implements ProxyObject {
                 @Override
                 public void navigateTo() {
                     switch (name) {
-                        case "修改密码" -> MainPage.this.performAll("""
-                                css[.user-avatar].click
-                                caption[Change Password].click
+                        case "聊天" -> MainPage.this.performAll("""
+                                id[new-chat-button].click
+                                caption[Confirm].click
                                 """);
                         default -> perform("caption[%s].click".formatted(name));
                     }
@@ -48,7 +48,7 @@ public class MainPage extends BasePage implements ProxyObject {
                 public NavigationPage create() {
                     return switch (name) {
                         default ->
-                                new ListPage(MainPage.this.locate("css[.app-main]").single(), workingSpace, name, MainPage.this, name.replace("列表", ""));
+                                new ListPage(MainPage.this.locate("css[main]").single(), workingSpace, name, MainPage.this, name.replace("列表", ""));
                     };
                 }
 

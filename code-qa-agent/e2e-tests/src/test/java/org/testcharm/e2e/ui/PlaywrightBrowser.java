@@ -204,9 +204,9 @@ public class PlaywrightBrowser {
             browser = playwright.chromium().connect("ws://" + wsHost + ":" + wsPort + "/", new BrowserType.ConnectOptions().setHeaders(Map.of("x-playwright-launch-options", ("{ \"headless\": false,     \"downloadsPath\": \"%s\" }").formatted(UPLOAD_AND_DOWNLOAD_DEFAULT_FOLDER))));
             var context = browser.newContext(new com.microsoft.playwright.Browser.NewContextOptions()
                     .setAcceptDownloads(true)
-                    .setViewportSize(1920, 1080)
+                    .setViewportSize(1280, 960)
                     .setTimezoneId("Asia/Shanghai")
-                    .setRecordVideoSize(1920, 1080)
+                    .setRecordVideoSize(1280, 960)
                     .setRecordVideoDir(Paths.get("../../../dev-ops/videos"))
             );
             page = context.newPage();

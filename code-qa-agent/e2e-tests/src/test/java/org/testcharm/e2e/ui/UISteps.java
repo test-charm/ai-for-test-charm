@@ -2,6 +2,9 @@ package org.testcharm.e2e.ui;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
 import io.cucumber.java.zh_cn.当;
 import io.cucumber.java.zh_cn.那么;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +24,27 @@ public class UISteps {
     JFactory jFactory;
 
     private MainPage mainPage;
+
+    @Before("@ui-login")
+    public void uiLogin() {
+        操作("""
+        登录: {
+          'Email address': joseph
+          Password: anything
+        }
+        """);
+
+        用户应该("""
+        ::eventually: {
+          ::this: /.*👋 我已准备好分析代码库，请问你想了解什么？.*/
+        }
+        """);
+    }
+
+    @After("@ui-login or @close-browser")
+    public void closeBrowser(Scenario scenario) {
+        playwrightBrowser.close(scenario);
+    }
 
     @当("操作:")
     public void 操作(String expression) {

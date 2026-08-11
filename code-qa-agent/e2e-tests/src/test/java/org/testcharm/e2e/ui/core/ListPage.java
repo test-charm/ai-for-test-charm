@@ -261,4 +261,12 @@ public class ListPage extends BasePage implements Iterable, NavigationPage {
                 throw new IllegalStateException("Duplicated columns: " + duplicated);
         }
     }
+
+    public ListPage 发送消息(String message) {
+        locate("caption['LLMs can make mistakes. Check important info.']").single();
+        fillInBy(Element::placeholder, Map.of("Type your message here...", message));
+        perform("id[chat-submit].click");
+        return this;
+    }
+
 }
