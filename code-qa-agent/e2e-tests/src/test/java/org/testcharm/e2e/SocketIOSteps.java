@@ -29,6 +29,7 @@ import static org.testcharm.dal.Assertions.expect;
 public class SocketIOSteps {
 
     private static final Pattern THREAD_ID_PATTERN = Pattern.compile("\"thread_id\":\"([^\"]+)\"");
+    private static final Pattern THREAD_ID_EQUALS_PATTERN = Pattern.compile("thread_id=([a-f0-9\\-]+)");
     private static final Pattern THREAD_ID_CAMEL_PATTERN = Pattern.compile("threadId=([a-f0-9\\-]+)");
 
     @Autowired
@@ -85,7 +86,7 @@ public class SocketIOSteps {
         for (Map<String, Object> event : client.getReceivedEvents()) {
             Object data = event.get("data");
             if (data != null) {
-                extractThreadId(data.toString());
+                extractThreadId(data);
             }
         }
         expect(client).should(dalExpression);
@@ -101,8 +102,38 @@ public class SocketIOSteps {
         client.clear();
     }
 
-    private void extractThreadId(String text) {
+    private void extractThreadId(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Object snakeThreadId = map.get("thread_id");
+            if (snakeThreadId instanceof String threadId && !threadId.isBlank()) {
+                PathVariableReplacement.replacements.put("thread-id", threadId);
+                return;
+            }
+            Object camelThreadId = map.get("threadId");
+            if (camelThreadId instanceof String threadId && !threadId.isBlank()) {
+                PathVariableReplacement.replacements.put("thread-id", threadId);
+                return;
+            }
+            for (Object nestedValue : map.values()) {
+                extractThreadId(nestedValue);
+            }
+            return;
+        }
+        if (value instanceof Iterable<?> iterable) {
+            for (Object nestedValue : iterable) {
+                extractThreadId(nestedValue);
+            }
+            return;
+        }
+        if (!(value instanceof String text)) {
+            return;
+        }
         var matcher = THREAD_ID_PATTERN.matcher(text);
+        if (matcher.find()) {
+            PathVariableReplacement.replacements.put("thread-id", matcher.group(1));
+            return;
+        }
+        matcher = THREAD_ID_EQUALS_PATTERN.matcher(text);
         if (matcher.find()) {
             PathVariableReplacement.replacements.put("thread-id", matcher.group(1));
             return;
@@ -122,6 +153,28 @@ public class SocketIOSteps {
 
     @Autowired
     private RestfulStep restfulStep;
+
+    @SneakyThrows
+    private void captureThreadIdFromEvents() {
+        long deadline = System.currentTimeMillis() + 10_000;
+        while (System.currentTimeMillis() < deadline) {
+            var threadId = client.getReceivedEvents().stream()
+                    .filter(e -> "new_message".equals(e.get("name")))
+                    .map(e -> e.get("data"))
+                    .filter(d -> d instanceof Map<?, ?>)
+                    .map(d -> ((Map<?, ?>) d).get("threadId"))
+                    .filter(t -> t instanceof String)
+                    .map(Object::toString)
+                    .findFirst()
+                    .orElse(null);
+            if (threadId != null) {
+                PathVariableReplacement.replacements.put("thread-id", threadId);
+                PathVariableReplacement.replacements.put("eval-thread-id", threadId);
+                break;
+            }
+            Thread.sleep(200);
+        }
+    }
 
     @SneakyThrows
     @当("用户发送消息{string}")
@@ -155,25 +208,7 @@ public class SocketIOSteps {
                     }
                   }
                 """.formatted(message));
-
-        // Capture the threadId from the first new_message event for later use by EvalSteps
-        long deadline = System.currentTimeMillis() + 10_000;
-        while (System.currentTimeMillis() < deadline) {
-            var threadId = client.getReceivedEvents().stream()
-                    .filter(e -> "new_message".equals(e.get("name")))
-                    .map(e -> e.get("data"))
-                    .filter(d -> d instanceof Map<?, ?>)
-                    .map(d -> ((Map<?, ?>) d).get("threadId"))
-                    .filter(t -> t instanceof String)
-                    .map(Object::toString)
-                    .findFirst()
-                    .orElse(null);
-            if (threadId != null) {
-                PathVariableReplacement.replacements.put("eval-thread-id", threadId);
-                break;
-            }
-            Thread.sleep(200);
-        }
+        captureThreadIdFromEvents();
     }
 
     @SneakyThrows
@@ -205,6 +240,7 @@ public class SocketIOSteps {
                     }
                   }
                 """.formatted(message));
+        captureThreadIdFromEvents();
     }
 
     @SneakyThrows

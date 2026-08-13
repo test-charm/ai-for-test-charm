@@ -793,6 +793,17 @@
       ---
       body(LlmResponse): {
         choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
           message: {
             content: '恢复后的回答。'
           }
@@ -804,8 +815,7 @@
       {
         "clientType": "webapp",
         "sessionId": "${session-id}",
-        "userEnv": "{}",
-        "threadId": "${resume-session-id}"
+        "userEnv": "{}"
       }
       """
     当仅发送消息"first question"
@@ -831,10 +841,31 @@
         "clientType": "webapp",
         "sessionId": "${resume-session-id}",
         "userEnv": "{}",
-        "threadId": "${resume-session-id}"
+        "threadId": "${thread-id}"
       }
       """
-    当仅发送消息"second question"
+    当发送事件 "connection_successful"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= resume_thread
+        } : {
+          ::size: 1
+        }
+      }
+      """
+    当发送事件 "client_message":
+      """
+      {
+        "message": {
+          "id": "${message-id}",
+          "createdAt": "2026-07-09T00:00:00.000Z",
+          "output": "second question",
+          "name": "joseph"
+        }
+      }
+      """
     那么收到的 Socket.IO 事件应满足:
       """
       ::eventually: {
@@ -853,7 +884,7 @@
     并且数据应为:
       """
       MockApi::filter: { POST: '/v1/chat/completions' } : {
-        ::size: 3
+        ::size: 4
       }
       """
 
@@ -1477,4 +1508,3 @@
         | required              |
         | null                  |
       """
-
