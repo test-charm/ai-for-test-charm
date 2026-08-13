@@ -24,6 +24,8 @@ public class LlmResponse {
         @Getter
         @Setter
         public static class Message {
+            @JsonProperty("reasoning_content")
+            private String reasoningContent;
             private String role, content;
             @JsonProperty("tool_calls")
             private List<ToolCall> toolCalls = new ArrayList<>();

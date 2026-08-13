@@ -30,6 +30,7 @@ if _coverage_data_file:
 # --- end coverage bootstrap ---
 
 import argparse
+import asyncio
 import logging
 import os
 
@@ -87,12 +88,16 @@ def create_mcp_server(host: str = "0.0.0.0", port: int = 3001) -> FastMCP:
 
         # Persist the request/response
         from mcp_recorder import save_mcp_request
-        await save_mcp_request(
-            question=question,
-            answer=answer,
-            provider=agent.provider,
-            model=agent.model,
+        logger.info("Persisting MCP request record")
+        await asyncio.shield(
+            save_mcp_request(
+                question=question,
+                answer=answer,
+                provider=agent.provider,
+                model=agent.model,
+            )
         )
+        logger.info("Persisted MCP request record")
 
         # Save coverage data after each request
         if _coverage_data_file:

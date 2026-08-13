@@ -4,7 +4,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, Text, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -41,6 +41,7 @@ class McpRequest(Base):
 
 _engine = None
 _sessionmaker = None
+_schema_ready = False
 
 
 def _get_sessionmaker() -> sessionmaker:
@@ -52,6 +53,17 @@ def _get_sessionmaker() -> sessionmaker:
     return _sessionmaker
 
 
+async def _ensure_schema() -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
+
+    _get_sessionmaker()
+    async with _engine.begin() as conn:
+        await conn.execute(text(MCP_REQUESTS_TABLE_SQL))
+    _schema_ready = True
+
+
 async def save_mcp_request(
     question: str,
     answer: str,
@@ -60,6 +72,7 @@ async def save_mcp_request(
 ) -> None:
     """Save an MCP question/answer pair to the database."""
     try:
+        await _ensure_schema()
         sm = _get_sessionmaker()
         async with sm() as session:
             session.add(McpRequest(

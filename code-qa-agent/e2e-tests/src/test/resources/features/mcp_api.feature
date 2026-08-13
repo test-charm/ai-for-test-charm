@@ -112,6 +112,63 @@
        | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
      """
 
+  @deepseek-model
+  场景: MCP问答时切换到DeepSeek备用LLM并传回reasoning_content
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      code: 429
+      body: ```
+            {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error", "code": "rate_limit_exceeded"}}
+            ```
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            reasoningContent: 'MCP需要带回这段推理'
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: 'MCP的deepseek备用LLM回复。'
+          }
+        }]
+      }
+      """
+    当向MCP服务发送问题"what is the deepseek backup"
+    那么MCP回答应为:
+      """
+      : MCP的deepseek备用LLM回复。
+      """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } : [{
+        body.json: {
+          model: mock-deepseek-chat
+          tool_choice: auto
+        }
+      } {
+        body.json: {
+          model: mock-deepseek-backup
+          tool_choice: auto
+        }
+      } {
+        body.json: {
+          model: mock-deepseek-backup
+          tool_choice: null
+          messages[2].reasoning_content= MCP需要带回这段推理
+        }
+      }]
+      """
+
   场景: MCP问答请求和回复持久化到数据库
     假如Mock API:
       """

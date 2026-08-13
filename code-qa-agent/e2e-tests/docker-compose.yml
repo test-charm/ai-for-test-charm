@@ -17,7 +17,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - 5432:5432
+      - 15432:5432
     environment:
       POSTGRES_DB: code_qa_agent
       POSTGRES_USER: code_qa_agent
@@ -126,6 +126,9 @@ services:
       CQA_MAX_ITERATIONS: 3
       CQA_LLM_API_KEY: mock-key
       CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_BACKUP_LLM_MODEL: mock-deepseek-backup
+      CQA_BACKUP_LLM_API_KEY: mock-backup-key
+      CQA_BACKUP_LLM_BASE_URL: http://mock-server:1080/v1
       CQA_WORKSPACE_PATH: /workspace
       CQA_AUTH_PASSWORD: ""
       CQA_DB_HOST: postgres
@@ -142,6 +145,53 @@ services:
         [
           "CMD-SHELL",
           "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+    restart: unless-stopped
+
+  mcp-server-deepseek:
+    <<: *e2e-image
+    profiles: ["deepseek"]
+    init: true
+    working_dir: /app
+    command: ["/bin/sh", "/app/e2e-tests/bootstrap-python.sh", "/bin/sh", "/app/e2e-tests/run-mcp-dev.sh"]
+    ports:
+      - "13001:3001"
+    volumes:
+      - ..:/app
+      - ${WORKSPACE_PATH:-..}:/workspace:ro
+      - ${WORKSPACE_PATH:-..}:/host/code-qa-agent:ro
+      - mcp-server-venv:/opt/venv
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONUNBUFFERED: "1"
+      WATCHFILES_FORCE_POLLING: "true"
+      CQA_LLM_PROVIDER: openai
+      CQA_LLM_MODEL: mock-deepseek-chat
+      CQA_MAX_ITERATIONS: 3
+      CQA_LLM_API_KEY: mock-key
+      CQA_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_BACKUP_LLM_MODEL: mock-deepseek-backup
+      CQA_BACKUP_LLM_API_KEY: mock-backup-key
+      CQA_BACKUP_LLM_BASE_URL: http://mock-server:1080/v1
+      CQA_WORKSPACE_PATH: /workspace
+      CQA_HOST_WORKSPACE_PATH: /host/code-qa-agent
+      CQA_DB_HOST: postgres
+      CQA_DB_PORT: 5432
+      CQA_DB_NAME: code_qa_agent
+      CQA_DB_USER: code_qa_agent
+      CQA_DB_PASSWORD: code_qa_agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import socket; s = socket.create_connection(('127.0.0.1', 3001), 5); s.close()\"",
         ]
       interval: 10s
       timeout: 5s

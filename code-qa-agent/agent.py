@@ -7,6 +7,7 @@ from typing import Any, Callable, Awaitable
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_openai.chat_models import base as openai_chat_base
 
 from config import settings
 from tools import list_directory, find_files, grep_code, read_file, get_symbols, get_repo_map
@@ -19,6 +20,64 @@ SYSTEM_PROMPT_PATH = Path(__file__).with_name("system_prompt.md")
 
 ProgressCallback = Callable[[int, int, str | None], Awaitable[None]]
 SystemPromptLoader = Callable[[], str]
+
+
+def _uses_deepseek_reasoning(model: str, base_url: str | None) -> bool:
+    return "deepseek" in model.lower() or "deepseek" in (base_url or "").lower()
+
+
+def _deepseek_message_to_dict(message: Any) -> dict[str, Any]:
+    normalized = (
+        openai_chat_base._convert_from_v1_to_chat_completions(message)
+        if isinstance(message, AIMessage)
+        else message
+    )
+    message_dict = openai_chat_base._convert_message_to_dict(normalized)
+    if isinstance(normalized, AIMessage):
+        reasoning_content = normalized.additional_kwargs.get("reasoning_content")
+        if reasoning_content is not None:
+            message_dict["reasoning_content"] = reasoning_content
+    return message_dict
+
+
+class DeepSeekCompatibleChatOpenAI(ChatOpenAI):
+    def _get_request_payload(
+        self,
+        input_: Any,
+        *,
+        stop: list[str] | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        if not _uses_deepseek_reasoning(self.model_name, self.openai_api_base):
+            return super()._get_request_payload(input_, stop=stop, **kwargs)
+
+        messages = self._convert_input(input_).to_messages()
+        payload = {**self._default_params, **kwargs}
+        payload["messages"] = [_deepseek_message_to_dict(message) for message in messages]
+        return payload
+
+    def _create_chat_result(
+        self,
+        response: dict[str, Any] | Any,
+        generation_info: dict[str, Any] | None = None,
+    ) -> Any:
+        result = super()._create_chat_result(response, generation_info)
+        if not _uses_deepseek_reasoning(self.model_name, self.openai_api_base):
+            return result
+
+        response_dict = (
+            response
+            if isinstance(response, dict)
+            else response.model_dump(
+                exclude={"choices": {"__all__": {"message": {"parsed"}}}},
+                warnings=False,
+            )
+        )
+        for generation, choice in zip(result.generations, response_dict.get("choices", []), strict=False):
+            reasoning_content = choice.get("message", {}).get("reasoning_content")
+            if reasoning_content is not None and isinstance(generation.message, AIMessage):
+                generation.message.additional_kwargs["reasoning_content"] = reasoning_content
+        return result
 
 
 def _required_tool_choice(provider: str, model: str = "") -> str:
@@ -119,7 +178,7 @@ def _create_llm():
         return ChatAnthropic(**kwargs)
     kwargs = dict(model=settings.llm_model, api_key=settings.llm_api_key)
     kwargs["base_url"] = settings.llm_base_url
-    return ChatOpenAI(**kwargs, max_retries=0)
+    return DeepSeekCompatibleChatOpenAI(**kwargs, max_retries=0)
 
 
 def _create_backup_llm():
@@ -137,7 +196,7 @@ def _create_backup_llm():
         return ChatAnthropic(**kwargs)
     kwargs = dict(model=settings.backup_llm_model, api_key=api_key)
     kwargs["base_url"] = base_url
-    return ChatOpenAI(**kwargs, max_retries=0)
+    return DeepSeekCompatibleChatOpenAI(**kwargs, max_retries=0)
 
 
 def _is_rate_limit_error(error: Exception) -> bool:
@@ -173,10 +232,6 @@ class CodeQAAgent:
                     settings.backup_llm_model,
                 ),
             )
-        else:
-            self._backup_llm = None
-            self._backup_llm_with_tools = None
-            self._backup_llm_with_required_tool = None
         self.conversations: dict[str, list] = {}
 
     def _get_messages(self, thread_id: str) -> list:
