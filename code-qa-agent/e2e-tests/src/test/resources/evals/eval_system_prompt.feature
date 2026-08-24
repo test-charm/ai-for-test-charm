@@ -21,10 +21,9 @@
       """
       JFactory 通过 CompositeDataRepository 支持同时对多个数据源进行读写。
 
-      CompositeDataRepository 可根据类型、包名或自定义条件将不同实体路由到对应的 DataRepository，
-      提供 registerByType、registerByPackage、registerBy 三种注册方式。
+      CompositeDataRepository 可根据类型、包名或自定义条件将不同实体路由到对应的 DataRepository
 
-      也可以使用 CompositeRepository，它自带 MemoryDataRepository 作为默认兜底仓库。
+      提供 registerByType、registerByPackage、registerBy 三种注册方式。
       """
 
   场景: RESTful-cucumber 同步设置 header
@@ -37,8 +36,6 @@
       通过 ::headers 内联语法在 POST/PUT/PATCH 的 body doc-string 或 GET/DELETE 的 params doc-string 中设置 header。
 
       ::headers 支持单值和多值数组语法。
-
-      Given header by RESTful api 是测试专用的，不能给用户使用。
       """
 
   场景: JFactory 简介问答
@@ -52,7 +49,11 @@
 
       嵌套属性设置时会自动查找 repository 中已有数据复用，保持数据一致性。
 
-      相关模块包括 jfactory-cucumber、jfactory-repo-jpa、DAL-extension-jfactory。
+      相关模块 jfactory-cucumber，JFactory 的 Cucumber glue 胶水层
+
+      相关模块 jfactory-repo-jpa，基于 JPA 的 repository 实现
+
+      相关模块 DAL-extension-jfactory，把 repository 中的 JFactory 数据暴露给 DAL
       """
 
   场景: DAL-java 简介问答
@@ -62,11 +63,19 @@
       """
       DAL-java 是 Test Charm 的数据断言语言 Java 实现，定位在 JSON 和通用编程语言之间。
 
-      核心能力包括属性导航、值匹配（= 严格相等，: 宽松匹配）、列表映射、表格断言、Schema 验证。
+      属性访问，支持 getter、public 字段、Map 键等
+
+      值匹配，= 精确匹配，: 宽松匹配
+
+      列表访问与映射，items[-1]、items.id[]等
+
+      表格，| name | age |
+
+      字面量，L、F、BD、BI、文本块、正则
 
       Java 入口为 Assertions.expect 和 DAL.dal()，通过 dal.extend() 可接入不同数据源扩展。
 
-      它是整个 Test Charm 生态的数据语言基石，让一种语言描述所有数据。
+      它是整个 Test Charm 的数据语言，让一种语言描述所有数据。
       """
 
   场景: RESTful-cucumber 简介问答
