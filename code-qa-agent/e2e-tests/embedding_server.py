@@ -73,7 +73,11 @@ class ContainmentResponse(BaseModel):
 
 @app.post("/containment", response_model=ContainmentResponse)
 def containment(req: ContainmentRequest) -> ContainmentResponse:
-    """Cross-similarity: for each claim, find max cosine similarity against any reply sentence."""
+    """Cross-similarity: for each claim, find max cosine similarity against any reply sentence.
+
+    ratio is the minimum of those per-claim maxima, so the check requires every
+    claim to be entailed (not just the average).
+    """
     reply_sentences = _split_sentences(req.reply)
     if not reply_sentences:
         return ContainmentResponse(
@@ -86,7 +90,7 @@ def containment(req: ContainmentRequest) -> ContainmentResponse:
     cos_scores = cosine_similarity(claim_embeds, reply_embeds)
 
     scores = [float(np.max(row)) for row in cos_scores]
-    ratio = round(float(np.mean(scores)), 4) if scores else 0.0
+    ratio = round(float(np.min(scores)), 4) if scores else 0.0
 
     return ContainmentResponse(
         scores=[round(s, 4) for s in scores],
