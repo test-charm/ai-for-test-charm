@@ -59,6 +59,41 @@ def _split_sentences(text: str) -> list[str]:
     return [s.strip() for s in sentences if len(s.strip()) >= 10]
 
 
+# 长句分包阈值：超过该长度视为"合并了多个要点的超长句"
+_LONG_SENTENCE_THRESHOLD = 60
+_CHUNK_BREAK_CHARS = "，、；：,;:()（"
+
+
+def _chunk_long_sentence(sentence: str, window: int = 48, step: int = 24) -> list[str]:
+    """把超长句切成重叠子片段，避免合并行稀释短 claim 的相似度。
+
+    滑窗覆盖整个句子，边界尽量落在标点后，避免切开语义单元。
+    短句（<=阈值）原样返回。
+    """
+    if len(sentence) <= _LONG_SENTENCE_THRESHOLD:
+        return [sentence]
+    chunks, start, n = [], 0, len(sentence)
+    while start < n:
+        end = min(start + window, n)
+        for i in range(end - 1, max(start, end - 10) - 1, -1):
+            if sentence[i] in _CHUNK_BREAK_CHARS:
+                end = i + 1
+                break
+        chunks.append(sentence[start:end].strip())
+        if end >= n:
+            break
+        start = max(end, start + step)
+    return [c for c in chunks if len(c) >= 4]
+
+
+def _split_into_units(text: str) -> list[str]:
+    """句子切分 + 超长句滑窗分包，保证比较单元粒度与 claim 匹配。"""
+    units = []
+    for sentence in _split_sentences(text):
+        units.extend(_chunk_long_sentence(sentence))
+    return units
+
+
 class ContainmentRequest(BaseModel):
     claims: list[str]
     reply: str
@@ -78,15 +113,15 @@ def containment(req: ContainmentRequest) -> ContainmentResponse:
     ratio is the minimum of those per-claim maxima, so the check requires every
     claim to be entailed (not just the average).
     """
-    reply_sentences = _split_sentences(req.reply)
-    if not reply_sentences:
+    reply_units = _split_into_units(req.reply)
+    if not reply_units:
         return ContainmentResponse(
             scores=[0.0] * len(req.claims), ratio=0.0,
             threshold=CONTAINMENT_THRESHOLD, passed=False,
         )
 
     claim_embeds = _embedding_model.encode(req.claims, normalize_embeddings=True)
-    reply_embeds = _embedding_model.encode(reply_sentences, normalize_embeddings=True)
+    reply_embeds = _embedding_model.encode(reply_units, normalize_embeddings=True)
     cos_scores = cosine_similarity(claim_embeds, reply_embeds)
 
     scores = [float(np.max(row)) for row in cos_scores]

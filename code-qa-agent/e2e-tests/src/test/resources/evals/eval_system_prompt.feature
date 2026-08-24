@@ -69,9 +69,7 @@
 
       列表访问与映射，items[-1]、items.id[]等
 
-      表格，| name | age |
-
-      字面量，L、F、BD、BI、文本块、正则
+      表格断言，| name | age | 风格
 
       Java 入口为 Assertions.expect 和 DAL.dal()，通过 dal.extend() 可接入不同数据源扩展。
 
@@ -83,7 +81,7 @@
     当收齐回复
     而且回复蕴含度应大于 0.70:
       """
-      RESTful-cucumber 将 HTTP 请求、请求体构造、响应断言封装为声明式 Step。
+      RESTful-cucumber 封装了 API 测试里最常见的一组 Cucumber step（发请求、构造请求体、验证响应）
 
       RestfulStep 定义公开 step：GET/DELETE/POST/PUT/PATCH，支持 doc-string 中 ::headers 内联语法设置请求头。
 
