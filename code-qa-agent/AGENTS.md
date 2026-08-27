@@ -71,6 +71,15 @@ docker compose --profile deepseek up -d --build --wait
 ./gradlew cucumber -Ptags='@deepseek-model'
 ```
 
+### 覆盖率数据
+
+**运行 e2e 测试时即会自动产生覆盖率数据**，无需额外操作：
+
+- 容器内 `run-chainlit-dev.sh` / `run-mcp-dev.sh` 会通过 `COVERAGE_DATA_FILE` 环境变量启用 coverage bootstrap（`app.py` / `mcp_server.py` 顶部的 bootstrap 块）。
+- 覆盖数据按进程分别落盘到 `e2e-tests/coverage-output/.coverage-*`（Chainlit → `.coverage-chainlit`，MCP → `.coverage-mcp`），并在每次 LLM 响应后增量保存，因此测试运行过程中持续更新、无需等容器退出。
+- 全量跑 `./gradlew cucumber` 之前可先清理旧数据：`find e2e-tests/coverage-output -name '.coverage-*' -type f -delete`（`run-all-tests.sh` 每次运行前会自动清理）。
+- 汇总覆盖率报告：`e2e-tests/collect-coverage.sh` 会合并所有 `.coverage-*` 文件并生成 HTML 报告到 `e2e-tests/coverage-output/html/index.html`。
+
 ### 端到端测试框架，基于 JFactory，DAL-java
 
 * 用到的重要测试框架都在这个开源代码仓中 https://github.com/leeonky/test-charm-java，主要是下面几个。需要时可以参考，从而更好地理解端到端测试
