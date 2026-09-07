@@ -280,6 +280,7 @@ class CodeQAAgent:
         llm_with_tools = self.llm_with_tools
         llm_with_required_tool = self.llm_with_required_tool
         fallback_active = False
+        session_headers = {"extra_headers": {"x-opencode-session": thread_id}}
 
         for iteration in range(settings.max_iterations):
             has_tool_results = self._has_tool_results(messages)
@@ -298,7 +299,7 @@ class CodeQAAgent:
 
             llm = llm_with_tools if has_tool_results else llm_with_required_tool
             try:
-                response = await llm.ainvoke(messages)
+                response = await llm.ainvoke(messages, **session_headers)
             except Exception as e:
                 if not _is_rate_limit_error(e) or fallback_active or self._backup_llm is None:
                     raise
@@ -310,7 +311,7 @@ class CodeQAAgent:
                 llm_with_tools = self._backup_llm_with_tools
                 llm_with_required_tool = self._backup_llm_with_required_tool
                 llm = llm_with_tools if has_tool_results else llm_with_required_tool
-                response = await llm.ainvoke(messages)
+                response = await llm.ainvoke(messages, **session_headers)
             response_text = _response_text(response.content)
             tool_calls = response.tool_calls or []
             logger.info(
@@ -413,10 +414,10 @@ class CodeQAAgent:
         yield ("token", "\n\n⚠️ Reached maximum iterations. Partial results above.", None)
         yield ("done", None, None)
 
-    async def ask(self, question: str, thread_id: str = str(uuid.uuid4()), progress_callback: ProgressCallback | None = None) -> str:
+    async def ask(self, question: str, thread_id: str | None = None, progress_callback: ProgressCallback | None = None) -> str:
         """Run the full ReAct loop and return the final answer (non-streaming)."""
         answer = ""
-        async for event_type, token, _data in self.astream_response(question, thread_id, progress_callback):
+        async for event_type, token, _data in self.astream_response(question, thread_id or str(uuid.uuid4()), progress_callback):
             if event_type == "token":
                 answer += token
         return answer

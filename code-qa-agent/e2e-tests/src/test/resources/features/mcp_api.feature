@@ -103,14 +103,18 @@
      """
      : MCP备用LLM的回复。
      """
-   并且数据应为:
-     """
-     MockApi::filter: { POST: '/v1/chat/completions' } :
-       | body.json.model      | body.json.tool_choice | headers.Authorization      |
-       | mock-gpt             | required              | Bearer mock-key            |
-       | mock-gpt-backup      | required              | Bearer mock-backup-key     |
-       | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
-     """
+    并且数据应为:
+      """
+      MockApi::filter: { POST: '/v1/chat/completions' } :
+        | body.json.model      | body.json.tool_choice | headers.Authorization      |
+        | mock-gpt             | required              | Bearer mock-key            |
+        | mock-gpt-backup      | required              | Bearer mock-backup-key     |
+        | mock-gpt-backup      | null                  | Bearer mock-backup-key     |
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: /[^\s\[\]]+/ }::size: 3 && ::filter: { headers['x-opencode-session'] = ::root[0].headers['x-opencode-session'] }::size: 3
+      """
 
   @deepseek-model
   场景: MCP问答时切换到DeepSeek备用LLM并传回reasoning_content
@@ -202,4 +206,107 @@
       """
       McpRequest: | id    | question              | answer            | provider | model    | createdAt    |
                   | {...} | persist this question | 持久化测试回答内容。 | openai   | mock-gpt | is AlmostNow |
+      """
+
+  场景: 同一次MCP问答的多次LLM调用复用同一x-opencode-session
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ReadFile): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '同一会话复用会话头的回答。'
+          }
+        }]
+      }
+      """
+    当向MCP服务发送问题"stable session question"
+    那么MCP回答应为:
+      """
+      : 同一会话复用会话头的回答。
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: /[^\s\[\]]+/ }::size: 3 && ::filter: { headers['x-opencode-session'] = ::root[0].headers['x-opencode-session'] }::size: 3
+      """
+
+  场景: 不同MCP问答使用不同的x-opencode-session
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第一个问题的回答。'
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '第二个问题的回答。'
+          }
+        }]
+      }
+      """
+    当向MCP服务发送问题"first isolated question"
+    那么MCP回答应为:
+      """
+      : 第一个问题的回答。
+      """
+    当向MCP服务发送问题"second isolated question"
+    那么MCP回答应为:
+      """
+      : 第二个问题的回答。
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: /[^\s\[\]]+/ }::size: 4 && ::filter: { headers['x-opencode-session'] = ::root[0].headers['x-opencode-session'] }::size: 2
       """

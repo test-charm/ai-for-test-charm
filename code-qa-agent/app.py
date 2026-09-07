@@ -77,7 +77,7 @@ async def on_chat_resume(thread):
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    thread_id = cl.user_session.get("thread_id")
+    thread_id = cl.user_session.get("thread_id") or cl.context.session.id
     start = time.monotonic()
     tool_calls = 0
 

@@ -767,6 +767,115 @@
         | null                  |
       """
 
+  场景: 聊天LLM请求携带以会话ID为值的x-opencode-session头
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '甲会话的回答。'
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: '乙会话的回答。'
+          }
+        }]
+      }
+      """
+    当POST "/set-session-cookie":
+      """
+      {
+        "session_id": "chat-session-alpha"
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "chat-session-alpha",
+        "userEnv": "{}"
+      }
+      """
+    当仅发送消息"alpha question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       甲会话的回答。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    当断开 Socket.IO 连接
+    当POST "/set-session-cookie":
+      """
+      {
+        "session_id": "chat-session-beta"
+      }
+      """
+    当连接 Socket.IO:
+      """
+      {
+        "clientType": "webapp",
+        "sessionId": "chat-session-beta",
+        "userEnv": "{}"
+      }
+      """
+    当仅发送消息"beta question"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       乙会话的回答。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: 'chat-session-alpha' }::size: 2 && ::filter: { headers['x-opencode-session']: 'chat-session-beta' }::size: 2
+      """
+
   场景: 断开重连后恢复会话不重新发送欢迎消息
     假如Mock API:
       """
@@ -989,6 +1098,52 @@
       """
 
   @deepseek-model
+  场景: DeepSeek模型请求携带x-opencode-session会话头
+    假如Mock API:
+      """
+      POST: '/v1/chat/completions'
+      ---
+      body(LlmResponse): {
+        choices: [{
+          finishReason: 'tool_calls'
+          message: {
+            toolCalls!: [{
+              function(ListDirectory): { ... }
+            }]
+          }
+        }]
+      }
+      ---
+      body(LlmResponse): {
+        choices: [{
+          message: {
+            content: 'deepseek会话头回答。'
+          }
+        }]
+      }
+      """
+    当用户发送消息"hello deepseek session"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       deepseek会话头回答。
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: /[^\s\[\]]+/ }::size: 2 && ::filter: { headers['x-opencode-session'] = ::root[0].headers['x-opencode-session'] }::size: 2
+      """
+
+  @deepseek-model
   场景: 主LLM遇到429错误时切换到DeepSeek备用LLM并传回reasoning_content
     假如Mock API:
       """
@@ -1112,6 +1267,56 @@
           tool_choice: null
         }
       }]
+      """
+
+  @anthropic-provider
+  场景: Anthropic提供者的LLM请求携带x-opencode-session会话头
+    假如Mock API:
+      """
+      POST: '/v1/messages'
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "tool_use",
+                  "name": "list_directory",
+                  "input": {"path": "."}
+                }
+              ]
+            }
+            ```
+      ---
+      body: ```
+            {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "anthropic会话头回答"
+                }
+              ]
+            }
+            ```
+      """
+    当用户发送消息"hello anthropic session"
+    那么收到的 Socket.IO 事件应满足:
+      """
+      ::eventually: {
+        receivedEvents::filter: {
+          name= new_message
+        } : [ ... {
+          data.output= ```
+                       anthropic会话头回答
+
+                       ---
+                       ⏱️ 耗时 0秒
+                       ```
+        } ... ]
+      }
+      """
+    并且验证Mock API:
+      """
+      ::filter: { headers['x-opencode-session']: /[^\s\[\]]+/ }::size: 2 && ::filter: { headers['x-opencode-session'] = ::root[0].headers['x-opencode-session'] }::size: 2
       """
 
   @anthropic-provider
