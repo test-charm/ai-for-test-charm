@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.testcharm.cucumber.restful.RestfulStep;
 import org.testcharm.cucumber.restful.extensions.PathVariableReplacement;
+import org.testcharm.dal.runtime.ProxyObject;
 import org.testcharm.jfactory.JFactory;
 
 import java.math.BigDecimal;
@@ -339,25 +340,8 @@ public class SocketIOSteps {
 
     private String lastAgentReply;
 
-    @而且("回复蕴含度应大于 {double}:")
-    public void 回复蕴含度应大于(double threshold, String goldenText) {
-        if (lastAgentReply == null) {
-            throw new AssertionError("No reply captured. Call 收齐回复 before 回复蕴含度.");
-        }
-        log.info("lastAgentReply {}", lastAgentReply);
-
-        double score = callNliAggregated(lastAgentReply, goldenText.strip());
-
-        log.info("Containment ratio={} threshold={}", score, threshold);
-
-        if (score <= threshold) {
-            throw new AssertionError(String.format(
-                    "NLI entailment score %.4f <= %.2f threshold. Key factual claims are not entailed by the reply.", score, threshold));
-        }
-    }
-
      @SneakyThrows
-     private double callNliAggregated(String actual, String golden) {
+     private BigDecimal callNliAggregated(String actual, String golden) {
          // Split golden into individual factual claims (separated by blank lines)
          String[] claims = golden.split("\\n{2,}");
          if (claims.length <= 1) {
@@ -376,7 +360,7 @@ public class SocketIOSteps {
          var scores = restfulStep.response("body.json.scores");
          log.info("Containment scores: {}", scores);
 
-         return ((BigDecimal) restfulStep.response("body.json.ratio")).doubleValue();
+         return restfulStep.response("body.json.ratio");
      }
 
     @SneakyThrows
@@ -487,6 +471,29 @@ public class SocketIOSteps {
             log.warn("queryLastMessageFromDb failed: {}", e.toString());
         }
         return null;
+    }
+
+    public class GoldenClaimVerifer implements ProxyObject {
+        private final String lastAgentReply;
+
+        public GoldenClaimVerifer(String lastAgentReply) {
+            this.lastAgentReply = lastAgentReply;
+        }
+
+        @Override
+        public Object getValue(Object property) {
+            return SocketIOSteps.this.callNliAggregated(lastAgentReply, (String) property);
+        }
+    }
+
+    @而且("回复蕴含度应该:")
+    public void 回复蕴含度应该(String expression) {
+        if (lastAgentReply == null) {
+            throw new AssertionError("No reply captured. Call 收齐回复 before 回复蕴含度.");
+        }
+        log.info("lastAgentReply {}", lastAgentReply);
+
+        expect(new GoldenClaimVerifer(lastAgentReply)).should(expression);
     }
 
 }

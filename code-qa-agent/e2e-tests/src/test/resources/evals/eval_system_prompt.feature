@@ -5,87 +5,79 @@
   场景: DAL group 语法问答
     当用户发送消息"dal验证的时候，如果两个属性值一样可以写成：<a,b>: 1。那么如果一个对象数组里面两个index的属性值一样，有类似的简单写法吗？"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      有，用 <<0 1>> 的 group 语法。group 语法的完整写法是双尖括号 <<a, b>>。
-
-      可以写成 list<<0 1>>.value= 100，等价于同时验证 list[0].value 和 list[1].value 都等于 100。
-
-      在对象作用域内也可以用 list: { <<0 1>>: 1 } 或 list: { <<[0], [1]>>: 1 } 的写法。
+      : {
+        '有，用 <<0 1>> 的 group 语法。group 语法的完整写法是双尖括号 <<a, b>>。'.ge: 0.7
+        '可以写成 list<<0 1>>.value= 100，等价于同时验证 list[0].value 和 list[1].value 都等于 100。'.ge: 0.7
+        '在对象作用域内也可以用 list: { <<0 1>>: 1 } 或 list: { <<[0], [1]>>: 1 } 的写法。'.ge: 0.7
+      }
       """
 
   场景: JFactory 多数据源读写问答
     当用户发送消息"如何使用JFactory同时对多个数据源进行数据读写"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      JFactory 通过 CompositeDataRepository 支持同时对多个数据源进行读写。
-
-      CompositeDataRepository 可根据类型、包名或自定义条件将不同实体路由到对应的 DataRepository
-
-      提供 registerByType、registerByPackage、registerBy 三种注册方式。
+      : {
+        'JFactory 通过 CompositeDataRepository 支持同时对多个数据源进行读写。'.ge: 0.7
+        'CompositeDataRepository 可根据类型、包名或自定义条件将不同实体路由到对应的 DataRepository'.ge: 0.7
+        '提供 registerByType、registerByPackage、registerBy 三种注册方式。'.ge: 0.7
+      }
       """
 
   场景: RESTful-cucumber 同步设置 header
     当用户发送消息"RESTful-cucumber 发请求的时候除了 request body，可以同步设置 header吗"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      可以同步设置 header。
-
-      通过 ::headers 内联语法在 POST/PUT/PATCH 的 body doc-string 或 GET/DELETE 的 params doc-string 中设置 header。
-
-      ::headers 支持单值和多值数组语法。
+      : {
+        '可以同步设置 header。'.ge: 0.7
+        '通过 ::headers 内联语法在 POST/PUT/PATCH 的 body doc-string 或 GET/DELETE 的 params doc-string 中设置 header。'.ge: 0.7
+        '::headers 支持单值和多值数组语法。'.ge: 0.7
+      }
       """
 
   场景: JFactory 简介问答
     当用户发送消息"简单介绍一下jfactory"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      jfactory 是 Test Charm 的数据创建库，核心理念是先定义有意义的 Spec 形态，场景中只覆盖关心的字段。
-
-      支持 Spec 复用数据形状、Trait 叠加变体、DataRepository 自动保存和查询复用。
-
-      嵌套属性设置时会自动查找 repository 中已有数据复用，保持数据一致性。
-
-      相关模块 jfactory-cucumber，JFactory 的 Cucumber glue 胶水层
-
-      相关模块 jfactory-repo-jpa，基于 JPA 的 repository 实现
-
-      相关模块 DAL-extension-jfactory，把 repository 中的 JFactory 数据暴露给 DAL
+      : {
+        'jfactory 是 Test Charm 的数据创建库，核心理念是先定义有意义的 Spec 形态，场景中只覆盖关心的字段。'.ge: 0.7
+        '支持 Spec 复用数据形状、Trait 叠加变体、DataRepository 自动保存和查询复用。'.ge: 0.7
+        '嵌套属性设置时会自动查找 repository 中已有数据复用，保持数据一致性。'.ge: 0.7
+        '相关模块 jfactory-cucumber，JFactory 的 Cucumber glue 胶水层'.ge: 0.7
+        '相关模块 jfactory-repo-jpa，基于 JPA 的 repository 实现'.ge: 0.7
+        '相关模块 DAL-extension-jfactory，把 repository 中的 JFactory 数据暴露给 DAL'.ge: 0.7
+      }
       """
 
   场景: DAL-java 简介问答
     当用户发送消息"简单介绍一下 DAL-java"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      DAL-java 是 Test Charm 的数据断言语言 Java 实现，定位在 JSON 和通用编程语言之间。
-
-      属性访问，支持 getter、public 字段、Map 键等
-
-      值匹配，= 精确匹配，: 宽松匹配
-
-      列表访问与映射，items[-1]、items.id[]等
-
-      表格断言，| name | age | 风格
-
-      Java 入口为 Assertions.expect 和 DAL.dal()，通过 dal.extend() 可接入不同数据源扩展。
-
-      它是整个 Test Charm 的数据语言，让一种语言描述所有数据。
+      : {
+        'DAL-java 是 Test Charm 的数据断言语言 Java 实现，定位在 JSON 和通用编程语言之间。'.ge: 0.7
+        '属性访问，支持 getter、public 字段、Map 键等'.ge: 0.7
+        '值匹配，= 精确匹配，: 宽松匹配'.ge: 0.7
+        '列表访问与映射，items[-1]、items.id[]等'.ge: 0.7
+        '表格断言，| name | age | 风格'.ge: 0.7
+        'Java 入口为 Assertions.expect 和 DAL.dal()，通过 dal.extend() 可接入不同数据源扩展。'.ge: 0.7
+        '它是整个 Test Charm 的数据语言，让一种语言描述所有数据。'.ge: 0.7
+      }
       """
 
   场景: RESTful-cucumber 简介问答
     当用户发送消息"简单介绍一下 RESTful-cucumber"
     当收齐回复
-    而且回复蕴含度应大于 0.70:
+    而且回复蕴含度应该:
       """
-      RESTful-cucumber 封装了 API 测试里最常见的一组 Cucumber step（发请求、构造请求体、验证响应）
-
-      RestfulStep 定义公开 step：GET/DELETE/POST/PUT/PATCH，支持 doc-string 中 ::headers 内联语法设置请求头。
-
-      响应校验用 `response should be:` 以 DAL 表达式断言状态码、body、headers。
-
-      深度集成 JFactory，支持 Spec/Trait 生成请求体。与 DAL-java 配合，请求与校验风格统一。
+      : {
+        'RESTful-cucumber 封装了 API 测试里最常见的一组 Cucumber step（发请求、构造请求体、验证响应）'.ge: 0.7
+        'RestfulStep 定义公开 step：GET/DELETE/POST/PUT/PATCH，支持 doc-string 中 ::headers 内联语法设置请求头。'.ge: 0.7
+        '响应校验用 `response should be:` 以 DAL 表达式断言状态码、body、headers。'.ge: 0.7
+        '深度集成 JFactory，支持 Spec/Trait 生成请求体。与 DAL-java 配合，请求与校验风格统一。'.ge: 0.7
+      }
       """
