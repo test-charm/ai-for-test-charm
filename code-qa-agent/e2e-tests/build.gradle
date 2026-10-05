@@ -18,7 +18,7 @@ java {
 ext {
     set('cucumberVersion', '7.30.0')
     set('springBootVersion', '3.3.2')
-    set('testCharmVersion', '1.0.0-alpha.21')
+    set('testCharmVersion', '1.0.0-alpha.29')
 }
 
 configurations {
