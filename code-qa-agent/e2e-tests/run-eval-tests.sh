@@ -26,6 +26,17 @@ cd "$SCRIPT_DIR"
 
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 
+# ─── 判定器选择 (embedding | jev) ───
+JUDGE="${CQA_EVAL_JUDGE:-embedding}"
+if [ "$JUDGE" = "jev" ]; then
+  export EMBEDDING_BASE_URL="http://localhost:18003"
+  export JEV_JUDGE_BASE_URL="http://localhost:18003"
+else
+  export EMBEDDING_BASE_URL="http://localhost:18002"
+  export JEV_JUDGE_BASE_URL="http://localhost:18003"
+fi
+log_info "Using judge: $JUDGE ($EMBEDDING_BASE_URL)"
+
 # ─── 停掉之前的 profile ───
 log_info "Stopping existing containers..."
 docker compose --profile default --profile deepseek --profile anthropic --profile eval down --remove-orphans 2>/dev/null || true

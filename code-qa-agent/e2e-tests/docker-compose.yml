@@ -360,6 +360,30 @@ services:
       start_period: 180s
     restart: unless-stopped
 
+  jev-judge:
+    build:
+      context: ..
+      dockerfile: e2e-tests/Dockerfile.jev-judge
+    profiles: ["eval"]
+    ports:
+      - "18003:8002"
+    environment:
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY}
+      TYPESAFE_MODEL: ${TYPESAFE_MODEL:-jev-1.13.0}
+      JUDGE_THRESHOLD: ${JUDGE_THRESHOLD:-0.6}
+      JUDGE_RECORD_ONLY: ${JUDGE_RECORD_ONLY:-false}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health')\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   code-qa-agent-venv:
   e2e-pgdata:
