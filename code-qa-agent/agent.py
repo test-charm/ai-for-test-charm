@@ -150,6 +150,21 @@ def _response_stop_reason(response: AIMessage) -> str:
     return "unknown"
 
 
+def _cache_usage(response: AIMessage) -> dict[str, Any]:
+    """Extract prompt cache stats, covering OpenAI, DeepSeek and Anthropic shapes."""
+    usage = getattr(response, "usage_metadata", None) or {}
+    details = usage.get("input_token_details") or {}
+    raw = (getattr(response, "response_metadata", None) or {}).get("token_usage") or {}
+    input_tokens = usage.get("input_tokens") or raw.get("prompt_tokens") or 0
+    cached = (
+        details.get("cache_read")
+        or raw.get("prompt_cache_hit_tokens")
+        or raw.get("cache_read_input_tokens")
+        or 0
+    )
+    return {"input": input_tokens, "cached": cached}
+
+
 def load_system_prompt(prompt_path: str | Path = SYSTEM_PROMPT_PATH) -> str:
     return Path(prompt_path).read_text(encoding="utf-8").strip()
 
@@ -321,6 +336,14 @@ class CodeQAAgent:
                 len(tool_calls),
                 _response_stop_reason(response),
                 _preview_text(response_text),
+            )
+            cache = _cache_usage(response)
+            logger.info(
+                "Prompt cache thread=%s input=%d cached=%d hit_ratio=%s",
+                thread_id,
+                cache["input"],
+                cache["cached"],
+                f"{cache['cached'] / cache['input']:.0%}" if cache["input"] else "n/a",
             )
             for idx, tool_call in enumerate(tool_calls, start=1):
                 logger.info(

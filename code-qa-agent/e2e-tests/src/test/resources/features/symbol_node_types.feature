@@ -181,8 +181,8 @@
         body.json: {
           messages: [... {
             content: ```
-                     class DAL (L25-145): public class DAL {
-                         class Compiler (L25-145): public class DAL {
+                     class DAL (L25-156): public class DAL {
+                         class Compiler (L25-156): public class DAL {
                          constructor DAL (L32-35): @Deprecated
                          method DAL (L37-40): @Deprecated
                          method DAL (L42-44): public static DAL dal() {
@@ -203,6 +203,7 @@
                          method String (L127-129): private String format(String expression) {
                          method DAL (L131-140): public DAL extend(Class<?>... excepts) {
                          method wrap (L142-144): public Data<?> wrap(Object object) {
+                         method test (L146-155): public boolean test(Object input, String expression) {
                      ```
             role: tool
             tool_call_id: get_symbols-0
